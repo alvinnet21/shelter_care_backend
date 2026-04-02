@@ -2,7 +2,7 @@ from typing import Optional
 from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from jose import JWTError, jwt
-from models.user import User, ShelterSeeker, Provider, Volunteer
+from models.user import User, ShelterSeeker, Provider, Verificator, Admin
 from repositories.user_repository import UserRepository
 
 
@@ -43,7 +43,7 @@ class AuthService:
         except JWTError:
             return None
 
-    async def register(self, email: str, full_name: str, password: str, role: str, question_answer: Optional[str] = None) -> Optional[User]:
+    async def register(self, email: str, full_name: str, password: str, role: str, question_answer: Optional[str] = None, id_document: Optional[str] = None) -> Optional[User]:
         """Register a new user"""
         existing_user = await self.user_repository.find_by_email(email)
         if existing_user:
@@ -62,10 +62,19 @@ class AuthService:
             user = Provider(
                 email=email,
                 full_name=full_name,
+                password=hashed_password,
+                id_document=id_document,
+                is_verified=False,
+                verification_status="PENDING"
+            )
+        elif role == "VERIFICATOR":
+            user = Verificator(
+                email=email,
+                full_name=full_name,
                 password=hashed_password
             )
-        elif role == "VOLUNTEER":
-            user = Volunteer(
+        elif role == "ADMIN":
+            user = Admin(
                 email=email,
                 full_name=full_name,
                 password=hashed_password

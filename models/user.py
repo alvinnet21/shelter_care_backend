@@ -30,10 +30,21 @@ class Provider(User):
     """Provider extends User"""
     listings: List[str] = Field(default_factory=list)
     incoming_bookings: List[str] = Field(default_factory=list)
+    id_document: Optional[str] = None
+    is_verified: bool = False
+    verification_status: str = "PENDING"
+    verification_reason: Optional[str] = None
+    verified_at: Optional[datetime] = None
+    verified_by: Optional[str] = None
     role: str = "PROVIDER"
 
 
-class Volunteer(User):
-    """Volunteer extends User"""
-    assigned_tasks: List[str] = Field(default_factory=list)
-    role: str = "VOLUNTEER"
+class Verificator(User):
+    """Verificator extends User"""
+    verified_providers: List[str] = Field(default_factory=list)
+    role: str = "VERIFICATOR"
+
+
+class Admin(User):
+    """Admin extends User"""
+    role: str = "ADMIN"

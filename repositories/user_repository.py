@@ -1,6 +1,6 @@
 from typing import Optional
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from models.user import User, ShelterSeeker, Provider, Volunteer
+from models.user import User, ShelterSeeker, Provider, Verificator, Admin
 
 
 class UserRepository:

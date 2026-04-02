@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import logging
 from pathlib import Path
@@ -20,6 +20,7 @@ from services.booking_service import BookingService
 from services.notification_service import NotificationService
 from models.booking import BookingStatus
 from models.review import BookingReview
+from models.notification import NotificationType
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -49,6 +50,7 @@ class RegisterRequest(BaseModel):
     password: str
     role: str
     question_answer: Optional[str] = None
+    id_document: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
@@ -83,6 +85,14 @@ class UpdatePasswordRequest(BaseModel):
     new_password: str
 
 
+class BlockDatesRequest(BaseModel):
+    dates: List[str]  # List of dates in ISO format
+
+
+class UnblockDatesRequest(BaseModel):
+    dates: List[str]  # List of dates to unblock
+
+
 async def get_current_user(authorization: Optional[str] = Header(None)):
     """Dependency to get current user from JWT token"""
     if not authorization or not authorization.startswith("Bearer "):
@@ -109,13 +119,14 @@ async def register(req: RegisterRequest):
         full_name=req.full_name,
         password=req.password,
         role=req.role,
-        question_answer=req.question_answer
+        question_answer=req.question_answer,
+        id_document=req.id_document
     )
     
     if not user:
         raise HTTPException(status_code=400, detail="Email already registered or invalid role")
     
-    return {"message": "User registered successfully", "user_id": user.id}
+    return {"message": "User registered successfully", "user_id": user.id, "needs_verification": req.role == "PROVIDER"}
 
 
 @api_router.post("/auth/login")
@@ -142,6 +153,143 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         "booking_history": current_user.get("booking_history", []),
         "question_answer": current_user.get("question_answer")
     }
+
+
+@api_router.get("/admin/stats")
+async def get_admin_stats(current_user: dict = Depends(get_current_user)):
+    """Get admin dashboard statistics"""
+    if current_user["role"] != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    total_users = await user_repo.collection.count_documents({})
+    total_seekers = await user_repo.collection.count_documents({"role": "SEEKER"})
+    total_providers = await user_repo.collection.count_documents({"role": "PROVIDER"})
+    pending_verification = await user_repo.collection.count_documents({
+        "role": "PROVIDER",
+        "verification_status": "PENDING"
+    })
+    verified_providers = await user_repo.collection.count_documents({
+        "role": "PROVIDER",
+        "is_verified": True
+    })
+    total_bookings = await booking_repo.collection.count_documents({})
+    
+    return {
+        "total_users": total_users,
+        "total_seekers": total_seekers,
+        "total_providers": total_providers,
+        "pending_verification": pending_verification,
+        "verified_providers": verified_providers,
+        "total_bookings": total_bookings
+    }
+
+
+@api_router.get("/admin/users")
+async def get_all_users(current_user: dict = Depends(get_current_user)):
+    """Get all users (Admin only)"""
+    if current_user["role"] != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    users = await user_repo.collection.find({}, {"_id": 0, "password": 0}).to_list(10000)
+    return {"users": users}
+
+
+@api_router.get("/verificator/stats")
+async def get_verificator_stats(current_user: dict = Depends(get_current_user)):
+    """Get verificator dashboard statistics"""
+    if current_user["role"] != "VERIFICATOR":
+        raise HTTPException(status_code=403, detail="Verificator access required")
+    
+    total_providers = await user_repo.collection.count_documents({"role": "PROVIDER"})
+    pending_verification = await user_repo.collection.count_documents({
+        "role": "PROVIDER",
+        "verification_status": "PENDING"
+    })
+    verified_providers = await user_repo.collection.count_documents({
+        "role": "PROVIDER",
+        "is_verified": True
+    })
+    
+    return {
+        "total_providers": total_providers,
+        "pending_verification": pending_verification,
+        "verified_providers": verified_providers
+    }
+
+
+@api_router.get("/verificator/providers")
+async def get_providers_for_verification(
+    status: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get providers list for verification"""
+    if current_user["role"] != "VERIFICATOR":
+        raise HTTPException(status_code=403, detail="Verificator access required")
+    
+    query = {"role": "PROVIDER"}
+    if status:
+        query["verification_status"] = status
+    
+    providers = await user_repo.collection.find(
+        query,
+        {"_id": 0, "password": 0}
+    ).to_list(10000)
+    
+    return {"providers": providers}
+
+
+@api_router.put("/verificator/providers/{provider_id}/verify")
+async def verify_provider(
+    provider_id: str,
+    action: str,
+    reason: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Approve or reject provider verification"""
+    if current_user["role"] != "VERIFICATOR":
+        raise HTTPException(status_code=403, detail="Verificator access required")
+    
+    provider = await user_repo.find_by_id(provider_id)
+    if not provider or provider["role"] != "PROVIDER":
+        raise HTTPException(status_code=404, detail="Provider not found")
+    
+    if action == "APPROVE":
+        update_data = {
+            "is_verified": True,
+            "verification_status": "APPROVED",
+            "verified_at": datetime.now(timezone.utc).isoformat(),
+            "verified_by": current_user["id"]
+        }
+    elif action == "REJECT":
+        if not reason:
+            raise HTTPException(status_code=400, detail="Rejection reason required")
+        update_data = {
+            "is_verified": False,
+            "verification_status": "REJECTED",
+            "verification_reason": reason,
+            "verified_at": datetime.now(timezone.utc).isoformat(),
+            "verified_by": current_user["id"]
+        }
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action")
+    
+    success = await user_repo.update_user(provider_id, update_data)
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to update verification status")
+    
+    # Send notification to provider
+    if action == "APPROVE":
+        message = "Congratulations! Your provider account has been verified. You can now create listings."
+    else:
+        message = f"Your provider verification was rejected. Reason: {reason}"
+    
+    await notification_service.send_notification(
+        user_id=provider_id,
+        message=message,
+        notification_type=NotificationType.GENERAL
+    )
+    
+    return {"message": f"Provider {action.lower()}ed successfully"}
 
 
 @api_router.put("/auth/profile")
@@ -213,19 +361,54 @@ async def get_listings(available_only: bool = True):
     return {"listings": listings}
 
 
-@api_router.get("/listings/{listing_id}")
-async def get_listing(listing_id: str):
-    """Get listing details with reviews"""
-    listing = await listing_service.get_listing_detail(listing_id)
+@api_router.get("/listings/recommended")
+async def get_recommended_listings():
+    """Get recommended listings sorted by average rating and review count"""
+    # Get all available listings
+    listings = await listing_repo.collection.find(
+        {"is_available": True},
+        {"_id": 0}
+    ).to_list(1000)
     
-    if not listing:
-        raise HTTPException(status_code=404, detail="Listing not found")
+    # Get reviews for each listing from the reviews collection
+    for listing in listings:
+        reviews = await review_repo.collection.find(
+            {"listing_id": listing["id"]},
+            {"_id": 0}
+        ).to_list(1000)
+        listing["reviews"] = reviews
+        
+        # Calculate average rating and booking count
+        if reviews:
+            listing["average_rating"] = round(sum(r["rating"] for r in reviews) / len(reviews), 1)
+            listing["review_count"] = len(reviews)
+        else:
+            listing["average_rating"] = 0
+            listing["review_count"] = 0
+        
+        # Get total accepted bookings
+        total_bookings = await booking_repo.collection.count_documents({
+            "listing_id": listing["id"],
+            "status": "ACCEPTED"
+        })
+        listing["total_bookings"] = total_bookings
+        
+        # Calculate recommendation score
+        # Score = (avg_rating * 0.6) + (review_count_normalized * 0.2) + (bookings_normalized * 0.2)
+        review_score = min(listing["review_count"], 10) / 10 * 5
+        booking_score = min(total_bookings, 20) / 20 * 5
+        listing["recommendation_score"] = round(
+            (listing["average_rating"] * 0.6) + (review_score * 0.2) + (booking_score * 0.2), 2
+        )
     
-    # Get reviews for this listing
-    reviews = await review_repo.get_reviews_by_listing(listing_id)
-    listing["reviews"] = reviews
+    # Sort by recommendation score (desc)
+    recommended = sorted(
+        listings,
+        key=lambda x: x["recommendation_score"],
+        reverse=True
+    )
     
-    return listing
+    return {"listings": recommended}
 
 
 @api_router.get("/listings/provider/me")
@@ -237,6 +420,48 @@ async def get_my_listings(current_user: dict = Depends(get_current_user)):
     listings = await listing_service.get_provider_listings(current_user["id"])
     return {"listings": listings}
 
+
+@api_router.get("/listings/{listing_id}")
+async def get_listing(listing_id: str):
+    """Get listing details with reviews"""
+    listing = await listing_service.get_listing_detail(listing_id)
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    return listing
+
+
+@api_router.put("/listings/{listing_id}/block-dates")
+async def block_dates(
+    listing_id: str,
+    start_date: str,
+    end_date: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Block specific dates for a listing (Provider manual block)"""
+    if current_user["role"] != "PROVIDER":
+        raise HTTPException(status_code=403, detail="Only providers can block dates")
+    
+    listing = await listing_repo.get_listing_by_id(listing_id)
+    if not listing or listing["provider_id"] != current_user["id"]:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    
+    # Create a "blocked" booking
+    from models.booking import Booking
+    blocked_booking = Booking(
+        seeker_id="SYSTEM_BLOCK",
+        seeker_name="Unavailable (Provider Block)",
+        provider_id=current_user["id"],
+        listing_id=listing_id,
+        listing_title=listing["title"],
+        booking_date=datetime.fromisoformat(start_date),
+        check_in_date=datetime.fromisoformat(start_date),
+        check_out_date=datetime.fromisoformat(end_date),
+        status="ACCEPTED"
+    )
+    
+    await booking_repo.create_booking(blocked_booking)
+    
+    return {"message": "Dates blocked successfully"}
 
 
 @api_router.put("/listings/{listing_id}")
@@ -279,7 +504,8 @@ async def update_listing(
 
 @api_router.get("/listings/{listing_id}/availability")
 async def check_availability(listing_id: str):
-    """Check blocked dates for a listing"""
+    """Check blocked dates for a listing (from bookings + manual blocks)"""
+    # Get blocked dates from bookings
     bookings = await booking_repo.collection.find({
         "listing_id": listing_id,
         "status": {"$in": ["PENDING", "ACCEPTED"]}
@@ -290,10 +516,86 @@ async def check_availability(listing_id: str):
         blocked_dates.append({
             "check_in": booking.get("check_in_date", booking.get("booking_date")),
             "check_out": booking.get("check_out_date", booking.get("booking_date")),
-            "status": booking["status"]
+            "status": booking["status"],
+            "type": "booking"
         })
     
+    # Get manual blocked dates from listing
+    listing = await listing_repo.get_listing_by_id(listing_id)
+    if listing and listing.get("manual_blocked_dates"):
+        for date in listing["manual_blocked_dates"]:
+            blocked_dates.append({
+                "check_in": date,
+                "check_out": date,
+                "status": "BLOCKED",
+                "type": "manual"
+            })
+    
     return {"blocked_dates": blocked_dates}
+
+
+@api_router.post("/listings/{listing_id}/block-dates")
+async def block_listing_dates(
+    listing_id: str,
+    req: BlockDatesRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Manually block dates for a listing (Provider only)"""
+    if current_user["role"] != "PROVIDER":
+        raise HTTPException(status_code=403, detail="Only providers can block dates")
+    
+    listing = await listing_repo.get_listing_by_id(listing_id)
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    
+    if listing["provider_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="You can only block dates for your own listings")
+    
+    # Get existing manual blocked dates
+    existing_blocked = listing.get("manual_blocked_dates", [])
+    
+    # Add new dates (avoid duplicates)
+    new_blocked = list(set(existing_blocked + req.dates))
+    
+    # Update listing
+    await listing_repo.collection.update_one(
+        {"id": listing_id},
+        {"$set": {"manual_blocked_dates": new_blocked}}
+    )
+    
+    return {"message": "Dates blocked successfully", "blocked_dates": new_blocked}
+
+
+@api_router.post("/listings/{listing_id}/unblock-dates")
+async def unblock_listing_dates(
+    listing_id: str,
+    req: UnblockDatesRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Unblock manually blocked dates for a listing (Provider only)"""
+    if current_user["role"] != "PROVIDER":
+        raise HTTPException(status_code=403, detail="Only providers can unblock dates")
+    
+    listing = await listing_repo.get_listing_by_id(listing_id)
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    
+    if listing["provider_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="You can only unblock dates for your own listings")
+    
+    # Get existing manual blocked dates
+    existing_blocked = listing.get("manual_blocked_dates", [])
+    
+    # Remove specified dates
+    new_blocked = [d for d in existing_blocked if d not in req.dates]
+    
+    # Update listing
+    await listing_repo.collection.update_one(
+        {"id": listing_id},
+        {"$set": {"manual_blocked_dates": new_blocked}}
+    )
+    
+    return {"message": "Dates unblocked successfully", "blocked_dates": new_blocked}
 
 
 @api_router.post("/bookings/{booking_id}/review")
@@ -374,80 +676,6 @@ async def get_booking_review(
     return {"has_review": True, "review": review}
 
 
-@api_router.put("/listings/{listing_id}")
-async def update_listing(
-    listing_id: str,
-    title: Optional[str] = None,
-    description: Optional[str] = None,
-    address: Optional[str] = None,
-    photos: Optional[List[str]] = None,
-    is_available: Optional[bool] = None,
-    current_user: dict = Depends(get_current_user)
-):
-    """Update a listing (Provider only)"""
-    if current_user["role"] != "PROVIDER":
-        raise HTTPException(status_code=403, detail="Only providers can update listings")
-    
-    listing = await listing_repo.get_listing_by_id(listing_id)
-    if not listing or listing["provider_id"] != current_user["id"]:
-        raise HTTPException(status_code=404, detail="Listing not found")
-    
-    update_data = {}
-    if title is not None:
-        update_data["title"] = title
-    if description is not None:
-        update_data["description"] = description
-    if address is not None:
-        update_data["address"] = address
-    if photos is not None:
-        update_data["photos"] = photos
-    if is_available is not None:
-        update_data["is_available"] = is_available
-    
-    if update_data:
-        success = await listing_repo.update_listing(listing_id, update_data)
-        if not success:
-            raise HTTPException(status_code=400, detail="Failed to update listing")
-    
-    return {"message": "Listing updated successfully"}
-
-
-@api_router.get("/listings/{listing_id}/availability")
-async def check_availability(listing_id: str):
-    """Check blocked dates for a listing"""
-    bookings = await booking_repo.collection.find({
-        "listing_id": listing_id,
-        "status": {"$in": ["PENDING", "ACCEPTED"]}
-    }).to_list(1000)
-    
-    blocked_dates = []
-    for booking in bookings:
-        blocked_dates.append({
-            "check_in": booking["check_in_date"],
-            "check_out": booking["check_out_date"],
-            "status": booking["status"]
-        })
-    
-    return {"blocked_dates": blocked_dates}
-async def add_review(
-    listing_id: str,
-    req: ReviewRequest,
-    current_user: dict = Depends(get_current_user)
-):
-    """Add review to a listing"""
-    success = await listing_service.add_review(
-        listing_id=listing_id,
-        user_id=current_user["id"],
-        rating=req.rating,
-        comment=req.comment
-    )
-    
-    if not success:
-        raise HTTPException(status_code=400, detail="Failed to add review")
-    
-    return {"message": "Review added successfully"}
-
-
 @api_router.post("/bookings")
 async def create_booking(
     req: CreateBookingRequest,
@@ -502,6 +730,12 @@ async def get_my_bookings(current_user: dict = Depends(get_current_user)):
         bookings = await booking_service.get_user_bookings(current_user["id"])
     elif current_user["role"] == "PROVIDER":
         bookings = await booking_service.get_provider_bookings(current_user["id"])
+    elif current_user["role"] == "ADMIN":
+        # Admin can see all bookings
+        bookings = await booking_repo.collection.find(
+            {},
+            {"_id": 0}
+        ).to_list(10000)
     else:
         raise HTTPException(status_code=403, detail="Invalid role")
     
