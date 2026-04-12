@@ -125,7 +125,7 @@ function AppContent() {
           }
         />
       </Routes>
-      <Toaster position="top-right" />
+      <Toaster position="bottom-right" />
     </div>
   );
 }
