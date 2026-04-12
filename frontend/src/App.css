@@ -1,0 +1,24 @@
+.min-h-screen-header {
+  min-height: calc(100vh - 64px);
+}
+
+.hero-gradient {
+  background: linear-gradient(to right, rgba(255,255,255,0.9), rgba(255,255,255,0.7), transparent);
+}
+
+.card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 48px rgba(229, 22, 54, 0.1);
+}
+
+.btn-primary {
+  @apply bg-[#e51636] text-white hover:bg-[#c4122f] transition-all rounded-lg px-6 py-3 font-medium;
+}
+
+.btn-secondary {
+  @apply bg-[#f3f4f6] text-[#111827] hover:bg-[#e5e7eb] transition-all rounded-lg px-6 py-3 font-medium;
+}
