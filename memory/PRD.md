@@ -36,7 +36,7 @@ Modify ShelterLink backend + frontend with the following features:
 3. **English UI:** All Indonesian text converted to English across all frontend pages (VerificatorDashboard, MyListingsPage, etc.)
 4. **Cancel Booking:** `PUT /api/bookings/{id}/cancel` for SEEKER role, only PENDING status. Added CANCELLED booking status. Cancel button on BookingsPage.
 5. **Police Check Upload:** Added `police_check` field to Provider model and registration. Verificator can view both ID and Police Check in modal viewer.
-6. **Calendar Blocking:** Existing bookings (ACCEPTED + PENDING) block calendar dates. ListingDetailPage shows blocked dates with color-coded badges (Booked/Pending/Provider Block).
+6. **Calendar Blocking:** Existing bookings (ACCEPTED + PENDING) block calendar dates. ListingDetailPage uses react-day-picker Calendar component with Popover - blocked dates are greyed out, line-through styled, and unselectable directly in the calendar picker. Past dates are also disabled.
 
 ## Testing Status
 - Backend: 100% pass (8/8 API tests)

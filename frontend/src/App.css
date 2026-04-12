@@ -22,3 +22,13 @@
 .btn-secondary {
   @apply bg-[#f3f4f6] text-[#111827] hover:bg-[#e5e7eb] transition-all rounded-lg px-6 py-3 font-medium;
 }
+
+/* Calendar blocked dates styling */
+.rdp-day_disabled {
+  text-decoration: line-through !important;
+  opacity: 0.3 !important;
+  background-color: #fef2f2 !important;
+  color: #d1d5db !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}

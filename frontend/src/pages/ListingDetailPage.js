@@ -234,7 +234,6 @@ const ListingDetailPage = () => {
                             onSelect={(date) => {
                               setCheckInDate(date);
                               setCheckInOpen(false);
-                              // Reset checkout if it's before new checkin
                               if (checkOutDate && date && checkOutDate <= date) {
                                 setCheckOutDate(null);
                               }
@@ -242,7 +241,7 @@ const ListingDetailPage = () => {
                             disabled={disabledDays}
                             initialFocus
                             classNames={{
-                              day_disabled: "text-[#d1d5db] opacity-40 line-through cursor-not-allowed",
+                              day_disabled: "text-[#d1d5db] opacity-30 line-through cursor-not-allowed bg-red-50",
                             }}
                           />
                         </PopoverContent>
@@ -281,7 +280,7 @@ const ListingDetailPage = () => {
                             ]}
                             initialFocus
                             classNames={{
-                              day_disabled: "text-[#d1d5db] opacity-40 line-through cursor-not-allowed",
+                              day_disabled: "text-[#d1d5db] opacity-30 line-through cursor-not-allowed bg-red-50",
                             }}
                           />
                         </PopoverContent>
