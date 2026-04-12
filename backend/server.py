@@ -310,7 +310,7 @@ async def verify_provider(
         notification_type=NotificationType.GENERAL
     )
     
-    return {"message": f"Provider {action.lower()}ed successfully"}
+    return {"message": f"Provider {action.lower()}d successfully"}
 
 
 @api_router.put("/auth/profile")
