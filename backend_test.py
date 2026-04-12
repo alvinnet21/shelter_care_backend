@@ -4,9 +4,11 @@ import json
 from datetime import datetime
 
 class ShelterLinkAPITester:
-    def __init__(self, base_url="https://95715eeb-f6f8-431b-9775-24aff10f83c6.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://shelter-calendar-pro.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.tokens = {}
+        self.listing_id = None
+        self.booking_id = None
         self.test_results = {
             "passed": [],
             "failed": [],
@@ -276,12 +278,183 @@ class ShelterLinkAPITester:
         else:
             self.log_result("Provider login after verification", False, "Failed to get providers list")
 
+    def test_existing_credentials_login(self):
+        """Test login with existing test credentials"""
+        print("\n🔍 Testing Existing Credentials Login...")
+        
+        # Login with seeker3 (has accepted booking Apr 15-20)
+        seeker3_data = {
+            "email": "seeker3@test.com",
+            "password": "password123"
+        }
+        
+        success, response = self.make_request('POST', 'auth/login', seeker3_data, expected_status=200)
+        if success:
+            response_data = response.json()
+            if response_data.get("token"):
+                self.tokens["seeker3"] = response_data["token"]
+                self.log_result("Seeker3 login", True)
+            else:
+                self.log_result("Seeker3 login", False, "No token received")
+        else:
+            self.log_result("Seeker3 login", False, f"Status: {response.status_code if response else 'No response'}")
+
+        # Login with provider
+        provider_data = {
+            "email": "provider@test.com",
+            "password": "password123"
+        }
+        
+        success, response = self.make_request('POST', 'auth/login', provider_data, expected_status=200)
+        if success:
+            response_data = response.json()
+            if response_data.get("token"):
+                self.tokens["provider_verified"] = response_data["token"]
+                self.log_result("Verified provider login", True)
+            else:
+                self.log_result("Verified provider login", False, "No token received")
+        else:
+            self.log_result("Verified provider login", False, f"Status: {response.status_code if response else 'No response'}")
+
+    def test_create_listing_for_calendar_test(self):
+        """Create a test listing for calendar testing"""
+        print("\n🔍 Creating Test Listing for Calendar...")
+        
+        if "provider_verified" not in self.tokens:
+            self.log_result("Create test listing", False, "No verified provider token")
+            return
+        
+        listing_data = {
+            "title": "Calendar Test Shelter",
+            "description": "Test shelter for calendar blocking functionality",
+            "address": "123 Test Street, Test City",
+            "photos": ["https://example.com/photo1.jpg"]
+        }
+        
+        success, response = self.make_request('POST', 'listings', listing_data, token=self.tokens["provider_verified"], expected_status=200)
+        
+        if success:
+            response_data = response.json()
+            listing = response_data.get("listing", {})
+            if listing.get("id"):
+                self.listing_id = listing["id"]
+                self.log_result("Create test listing", True)
+            else:
+                self.log_result("Create test listing", False, "No listing ID returned")
+        else:
+            self.log_result("Create test listing", False, f"Status: {response.status_code if response else 'No response'}")
+
+    def test_create_accepted_booking(self):
+        """Create an accepted booking for Apr 15-20 to test calendar blocking"""
+        print("\n🔍 Creating Accepted Booking for Calendar Test...")
+        
+        if not self.listing_id or "seeker3" not in self.tokens:
+            self.log_result("Create accepted booking", False, "Missing listing ID or seeker3 token")
+            return
+        
+        # Create booking
+        booking_data = {
+            "listing_id": self.listing_id,
+            "check_in_date": "2025-04-15T00:00:00",
+            "check_out_date": "2025-04-20T00:00:00"
+        }
+        
+        success, response = self.make_request('POST', 'bookings', booking_data, token=self.tokens["seeker3"], expected_status=200)
+        
+        if success:
+            response_data = response.json()
+            booking = response_data.get("booking", {})
+            if booking.get("id"):
+                self.booking_id = booking["id"]
+                
+                # Accept the booking as provider
+                accept_success, accept_response = self.make_request(
+                    'PUT', 
+                    f'bookings/{self.booking_id}/accept', 
+                    token=self.tokens["provider_verified"]
+                )
+                
+                if accept_success:
+                    self.log_result("Create and accept booking", True)
+                else:
+                    self.log_result("Create and accept booking", False, "Failed to accept booking")
+            else:
+                self.log_result("Create and accept booking", False, "No booking ID returned")
+        else:
+            self.log_result("Create and accept booking", False, f"Status: {response.status_code if response else 'No response'}")
+
+    def test_listing_availability_api(self):
+        """Test the listing availability API returns blocked dates"""
+        print("\n🔍 Testing Listing Availability API...")
+        
+        if not self.listing_id:
+            self.log_result("Listing availability API", False, "No listing ID available")
+            return
+        
+        success, response = self.make_request('GET', f'listings/{self.listing_id}/availability')
+        
+        if success:
+            response_data = response.json()
+            blocked_dates = response_data.get("blocked_dates", [])
+            
+            # Check if we have blocked dates from the accepted booking
+            has_april_block = False
+            for block in blocked_dates:
+                check_in = block.get("check_in", "")
+                if "2025-04-15" in check_in:
+                    has_april_block = True
+                    break
+            
+            if has_april_block:
+                self.log_result("Listing availability API returns blocked dates", True)
+            else:
+                self.log_result("Listing availability API returns blocked dates", False, f"No April 15-20 block found in: {blocked_dates}")
+        else:
+            self.log_result("Listing availability API returns blocked dates", False, f"Status: {response.status_code if response else 'No response'}")
+
+    def test_manual_date_blocking(self):
+        """Test manual date blocking by provider"""
+        print("\n🔍 Testing Manual Date Blocking...")
+        
+        if not self.listing_id or "provider_verified" not in self.tokens:
+            self.log_result("Manual date blocking", False, "Missing listing ID or provider token")
+            return
+        
+        # Block some manual dates
+        block_data = {
+            "dates": ["2025-05-01", "2025-05-02", "2025-05-03"]
+        }
+        
+        success, response = self.make_request(
+            'POST', 
+            f'listings/{self.listing_id}/block-dates', 
+            block_data, 
+            token=self.tokens["provider_verified"]
+        )
+        
+        if success:
+            # Verify the dates are blocked by checking availability
+            avail_success, avail_response = self.make_request('GET', f'listings/{self.listing_id}/availability')
+            
+            if avail_success:
+                blocked_dates = avail_response.json().get("blocked_dates", [])
+                has_manual_block = any("2025-05-01" in block.get("check_in", "") for block in blocked_dates)
+                
+                if has_manual_block:
+                    self.log_result("Manual date blocking", True)
+                else:
+                    self.log_result("Manual date blocking", False, "Manual blocked dates not found in availability")
+            else:
+                self.log_result("Manual date blocking", False, "Failed to verify blocked dates")
+        else:
+            self.log_result("Manual date blocking", False, f"Status: {response.status_code if response else 'No response'}")
+
     def run_all_tests(self):
         """Run all backend tests"""
         print("🚀 Starting ShelterLink Backend API Tests...")
         print(f"Testing against: {self.base_url}")
         
-        # Test sequence
+        # Test sequence - original tests
         self.test_provider_registration_with_documents()
         self.test_provider_login_blocked_when_not_verified()
         self.test_seeker_login_works_normally()
@@ -290,6 +463,14 @@ class ShelterLinkAPITester:
         self.test_forgot_password_endpoint()
         self.test_cancel_booking_endpoint()
         self.test_provider_login_after_verification()
+        
+        # Calendar blocking tests
+        print("\n🗓️ Starting Calendar Blocking Tests...")
+        self.test_existing_credentials_login()
+        self.test_create_listing_for_calendar_test()
+        self.test_create_accepted_booking()
+        self.test_listing_availability_api()
+        self.test_manual_date_blocking()
         
         # Summary
         print(f"\n📊 Test Summary:")

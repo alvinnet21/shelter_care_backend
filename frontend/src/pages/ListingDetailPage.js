@@ -2,8 +2,11 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-import { MapPin, Star, Calendar, ArrowLeft, Send, Lock } from 'lucide-react';
+import { MapPin, Star, Calendar as CalendarIcon, ArrowLeft, Send } from 'lucide-react';
 import { toast } from 'sonner';
+import { Calendar } from '../components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
+import { format, eachDayOfInterval, parseISO, isWithinInterval, isBefore, startOfDay } from 'date-fns';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -13,10 +16,12 @@ const ListingDetailPage = () => {
   const navigate = useNavigate();
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [checkInDate, setCheckInDate] = useState('');
-  const [checkOutDate, setCheckOutDate] = useState('');
+  const [checkInDate, setCheckInDate] = useState(null);
+  const [checkOutDate, setCheckOutDate] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [blockedDates, setBlockedDates] = useState([]);
+  const [checkInOpen, setCheckInOpen] = useState(false);
+  const [checkOutOpen, setCheckOutOpen] = useState(false);
 
   useEffect(() => {
     fetchListing();
@@ -45,26 +50,32 @@ const ListingDetailPage = () => {
     }
   };
 
-  // Compute blocked date ranges for display
-  const blockedDateInfo = useMemo(() => {
-    const accepted = blockedDates.filter(d => d.status === 'ACCEPTED');
-    const pending = blockedDates.filter(d => d.status === 'PENDING');
-    const manual = blockedDates.filter(d => d.type === 'manual');
-    return { accepted, pending, manual, total: blockedDates.length };
-  }, [blockedDates]);
-
-  // Check if a date falls within any blocked range
-  const isDateBlocked = (dateStr) => {
-    const date = new Date(dateStr);
+  // Build array of disabled Date objects from blocked ranges
+  const disabledDays = useMemo(() => {
+    const days = [];
     for (const block of blockedDates) {
-      const checkIn = new Date(block.check_in);
-      const checkOut = new Date(block.check_out);
-      if (date >= checkIn && date < checkOut) return true;
-      // For manual blocks, check exact date match
-      if (block.type === 'manual' && dateStr === block.check_in) return true;
+      try {
+        const checkIn = startOfDay(parseISO(block.check_in));
+        const checkOut = startOfDay(parseISO(block.check_out));
+        if (block.type === 'manual') {
+          days.push(checkIn);
+        } else {
+          const range = eachDayOfInterval({ start: checkIn, end: checkOut });
+          // exclude the checkout day itself for bookings (checkout day is available)
+          range.forEach((d, idx) => {
+            if (idx < range.length - 1) {
+              days.push(d);
+            }
+          });
+        }
+      } catch (e) {
+        // skip invalid dates
+      }
     }
-    return false;
-  };
+    // Also disable past dates
+    days.push({ before: startOfDay(new Date()) });
+    return days;
+  }, [blockedDates]);
 
   const handleBooking = async (e) => {
     e.preventDefault();
@@ -85,17 +96,8 @@ const ListingDetailPage = () => {
       return;
     }
 
-    const checkIn = new Date(checkInDate);
-    const checkOut = new Date(checkOutDate);
-
-    if (checkOut <= checkIn) {
+    if (checkOutDate <= checkInDate) {
       toast.error('Check-out date must be after check-in date');
-      return;
-    }
-
-    // Client-side check for blocked dates
-    if (isDateBlocked(checkInDate) || isDateBlocked(checkOutDate)) {
-      toast.error('Selected dates overlap with blocked dates. Please choose different dates.');
       return;
     }
 
@@ -106,8 +108,8 @@ const ListingDetailPage = () => {
         `${API}/bookings`,
         {
           listing_id: id,
-          check_in_date: new Date(checkInDate).toISOString(),
-          check_out_date: new Date(checkOutDate).toISOString()
+          check_in_date: checkInDate.toISOString(),
+          check_out_date: checkOutDate.toISOString()
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -195,99 +197,110 @@ const ListingDetailPage = () => {
               <p className="text-[#4b5563] leading-relaxed">{listing.description}</p>
             </div>
 
-            {/* Blocked Dates Info */}
-            {blockedDateInfo.total > 0 && (
-              <div className="border-t border-[#e5e7eb] pt-6 mb-6">
-                <h2 className="text-xl font-semibold text-[#111827] mb-4 flex items-center gap-2">
-                  <Lock className="h-5 w-5 text-[#e51636]" />
-                  Blocked Dates
-                </h2>
-                <div className="space-y-2">
-                  {blockedDateInfo.accepted.map((block, i) => (
-                    <div key={`accepted-${i}`} className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                      <Calendar className="h-4 w-4 text-red-600" />
-                      <span className="text-sm text-red-800">
-                        {new Date(block.check_in).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        {' - '}
-                        {new Date(block.check_out).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        <span className="ml-2 text-xs font-medium bg-red-200 px-2 py-0.5 rounded">Booked</span>
-                      </span>
-                    </div>
-                  ))}
-                  {blockedDateInfo.pending.map((block, i) => (
-                    <div key={`pending-${i}`} className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
-                      <Calendar className="h-4 w-4 text-yellow-600" />
-                      <span className="text-sm text-yellow-800">
-                        {new Date(block.check_in).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        {' - '}
-                        {new Date(block.check_out).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        <span className="ml-2 text-xs font-medium bg-yellow-200 px-2 py-0.5 rounded">Pending</span>
-                      </span>
-                    </div>
-                  ))}
-                  {blockedDateInfo.manual.map((block, i) => (
-                    <div key={`manual-${i}`} className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
-                      <Calendar className="h-4 w-4 text-orange-600" />
-                      <span className="text-sm text-orange-800">
-                        {new Date(block.check_in).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        <span className="ml-2 text-xs font-medium bg-orange-200 px-2 py-0.5 rounded">Blocked by Provider</span>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {user && user.role === 'SEEKER' && listing.is_available && (
               <div className="border-t border-[#e5e7eb] pt-6 mb-6">
                 <h2 className="text-xl font-semibold text-[#111827] mb-4">Book this shelter</h2>
                 {blockedDates.length > 0 && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
                     <p className="text-sm text-yellow-800">
-                      Some dates may not be available due to existing bookings or provider blocks. Please check the blocked dates above before booking.
+                      Some dates are unavailable. Blocked dates are greyed out in the calendar.
                     </p>
                   </div>
                 )}
                 <form onSubmit={handleBooking} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Check-in Date Picker */}
                     <div>
                       <label className="block text-sm font-medium text-[#111827] mb-2">
                         Check-in Date
                       </label>
-                      <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9ca3af]" />
-                        <input
-                          type="date"
-                          value={checkInDate}
-                          onChange={(e) => setCheckInDate(e.target.value)}
-                          min={new Date().toISOString().split('T')[0]}
-                          className="w-full pl-10 pr-4 py-3 border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e51636]/30 focus:border-[#e51636]"
-                          required
-                          data-testid="check-in-date-input"
-                        />
-                      </div>
+                      <Popover open={checkInOpen} onOpenChange={setCheckInOpen}>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="w-full flex items-center px-4 py-3 border border-[#e5e7eb] rounded-lg text-left focus:outline-none focus:ring-2 focus:ring-[#e51636]/30 focus:border-[#e51636] bg-white"
+                            data-testid="check-in-date-input"
+                          >
+                            <CalendarIcon className="h-5 w-5 text-[#9ca3af] mr-3" />
+                            <span className={checkInDate ? 'text-[#111827]' : 'text-[#9ca3af]'}>
+                              {checkInDate ? format(checkInDate, 'MMM dd, yyyy') : 'Select check-in date'}
+                            </span>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={checkInDate}
+                            onSelect={(date) => {
+                              setCheckInDate(date);
+                              setCheckInOpen(false);
+                              // Reset checkout if it's before new checkin
+                              if (checkOutDate && date && checkOutDate <= date) {
+                                setCheckOutDate(null);
+                              }
+                            }}
+                            disabled={disabledDays}
+                            initialFocus
+                            classNames={{
+                              day_disabled: "text-[#d1d5db] opacity-40 line-through cursor-not-allowed",
+                            }}
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
+
+                    {/* Check-out Date Picker */}
                     <div>
                       <label className="block text-sm font-medium text-[#111827] mb-2">
                         Check-out Date
                       </label>
-                      <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9ca3af]" />
-                        <input
-                          type="date"
-                          value={checkOutDate}
-                          onChange={(e) => setCheckOutDate(e.target.value)}
-                          min={checkInDate || new Date().toISOString().split('T')[0]}
-                          className="w-full pl-10 pr-4 py-3 border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e51636]/30 focus:border-[#e51636]"
-                          required
-                          data-testid="check-out-date-input"
-                        />
-                      </div>
+                      <Popover open={checkOutOpen} onOpenChange={setCheckOutOpen}>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="w-full flex items-center px-4 py-3 border border-[#e5e7eb] rounded-lg text-left focus:outline-none focus:ring-2 focus:ring-[#e51636]/30 focus:border-[#e51636] bg-white"
+                            data-testid="check-out-date-input"
+                          >
+                            <CalendarIcon className="h-5 w-5 text-[#9ca3af] mr-3" />
+                            <span className={checkOutDate ? 'text-[#111827]' : 'text-[#9ca3af]'}>
+                              {checkOutDate ? format(checkOutDate, 'MMM dd, yyyy') : 'Select check-out date'}
+                            </span>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={checkOutDate}
+                            onSelect={(date) => {
+                              setCheckOutDate(date);
+                              setCheckOutOpen(false);
+                            }}
+                            disabled={[
+                              ...disabledDays,
+                              ...(checkInDate ? [{ before: checkInDate }] : [])
+                            ]}
+                            initialFocus
+                            classNames={{
+                              day_disabled: "text-[#d1d5db] opacity-40 line-through cursor-not-allowed",
+                            }}
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
+
+                  {/* Selected dates summary */}
+                  {checkInDate && checkOutDate && (
+                    <div className="bg-[#f0fdf4] border border-green-200 rounded-lg p-3">
+                      <p className="text-sm text-green-800">
+                        <span className="font-medium">Selected:</span> {format(checkInDate, 'MMM dd, yyyy')} to {format(checkOutDate, 'MMM dd, yyyy')}
+                      </p>
+                    </div>
+                  )}
+
                   <button
                     type="submit"
-                    disabled={submitting}
+                    disabled={submitting || !checkInDate || !checkOutDate}
                     className="w-full bg-[#e51636] text-white hover:bg-[#c4122f] px-8 py-3 rounded-lg transition-all font-medium flex items-center justify-center space-x-2 disabled:opacity-50"
                     data-testid="submit-booking-button"
                   >
