@@ -174,9 +174,10 @@ async def update_profile(req: UpdateProfileRequest, current_user: dict = Depends
     if req.phone_number is not None:
         update_data["phone_number"] = req.phone_number
     if update_data:
-        success = await user_repo.update_user(current_user["id"], update_data)
-        if not success:
-            raise HTTPException(status_code=400, detail="Failed to update profile")
+        await user_repo.collection.update_one(
+            {"id": current_user["id"]},
+            {"$set": update_data}
+        )
     return {"message": "Profile updated successfully"}
 
 @api_router.put("/auth/password")

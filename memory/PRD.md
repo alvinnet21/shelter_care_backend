@@ -1,58 +1,43 @@
 # ShelterLink PRD
 
 ## Original Problem Statement
-Modify ShelterLink backend + frontend with the following features:
-1. Provider cannot login if not verified by Verificator (show notification)
-2. Forgot password feature - sends random password to email
-3. All UI/messages in English
-4. Cancel booking for Shelter Seeker if status is PENDING
-5. Provider registration requires Police Check upload (JPEG/PNG)
-6. Auto-block calendar when shelter is accepted/booked or blocked by provider
+Major update to ShelterLink with admin management, dashboard redesign, profile system, address splitting, phone numbers, and public profile pages.
 
 ## Architecture
 - **Backend:** FastAPI (Python) with MongoDB (Motor async driver)
 - **Frontend:** React 19 with Tailwind CSS, Radix UI, React Router
 - **Email:** Gmail SMTP with App Password
-- **Auth:** JWT-based authentication with bcrypt password hashing
-- **Structure:** Clean Architecture (models, repositories, services, server)
+- **Auth:** JWT with bcrypt, soft-delete support
 
-## User Personas
-- **Shelter Seeker:** Browse listings, book shelters, cancel pending bookings, leave reviews
-- **Shelter Provider:** Create/manage listings, accept/reject bookings, block dates
-- **Verificator:** Approve/reject provider verification (view ID + Police Check)
-- **Admin:** View system statistics and all users
+## What's Been Implemented
 
-## Core Requirements (Static)
-- Multi-role authentication system (SEEKER, PROVIDER, VERIFICATOR, ADMIN)
-- Listing management with photos
-- Booking workflow (create, accept, reject, cancel)
-- Review system
-- Notification system
-- Provider verification workflow
+### Phase 1 (2026-04-12)
+1. Provider Login Verification (403 if unverified)
+2. Forgot Password (Gmail SMTP)
+3. English UI throughout
+4. Cancel Booking (SEEKER, PENDING only)
+5. Police Check Upload for Provider registration
+6. Calendar Blocking (react-day-picker with disabled dates)
 
-## What's Been Implemented (2026-04-12)
-1. **Provider Login Verification:** Provider cannot login if `is_verified=false`. Returns 403 with specific error message (pending/rejected).
-2. **Forgot Password:** `POST /api/auth/forgot-password` generates random password, sends via Gmail SMTP, stores hashed version.
-3. **English UI:** All Indonesian text converted to English across all frontend pages (VerificatorDashboard, MyListingsPage, etc.)
-4. **Cancel Booking:** `PUT /api/bookings/{id}/cancel` for SEEKER role, only PENDING status. Added CANCELLED booking status. Cancel button on BookingsPage.
-5. **Police Check Upload:** Added `police_check` field to Provider model and registration. Verificator can view both ID and Police Check in modal viewer.
-6. **Calendar Blocking:** Existing bookings (ACCEPTED + PENDING) block calendar dates. ListingDetailPage uses react-day-picker Calendar component with Popover - blocked dates are greyed out, line-through styled, and unselectable directly in the calendar picker. Past dates are also disabled.
-
-## Testing Status
-- Backend: 100% pass (8/8 API tests)
-- Frontend: 95% pass (all features working)
+### Phase 2 (2026-04-12) - Current
+1. **Admin Dashboard** - Stats: Total Users/Bookings/Listings. Tabs: Overview, User Management (soft delete), Listing Management (takedown). Verificator Panel link.
+2. **Soft Delete** - Users get `deleted_at` field. Deleted users can't login. Deleting Provider also soft-deletes their listings.
+3. **Seeker Dashboard** - No stats cards. Quick actions: Browse Shelters, My Bookings.
+4. **Provider Dashboard** - Quick actions: My Listings, Requests (pending bookings), Bookings (history).
+5. **Provider Bookings** - Split into Requests tab (PENDING) and History tab (ACCEPTED/REJECTED/CANCELLED). Shows seeker phone number.
+6. **Address Split** - Listing address separated into Address, Suburb, Postcode (3 fields).
+7. **User Profile** - Photo upload from computer (base64), Name, DOB, Description, Phone (+61 prefix for Provider/Seeker).
+8. **Phone Number Rules** - Provider phone: only visible to themselves. Seeker phone: visible in provider booking requests.
+9. **Listing Detail** - "Who owns this space" section with provider photo + name (clickable to profile page).
+10. **Public Profile Page** - `/profile/:id` route. Shows Image, Name, DOB, Description. Seeker: shows phone. Provider: shows listings + last 3 reviews (no phone).
 
 ## Prioritized Backlog
-### P0 (Done)
-- All 6 requested features implemented and tested
+### P1
+- Push notification system (real-time)
+- Search/filter for listings
+- Map integration for shelter locations
 
-### P1 (Next)
-- Email template customization
-- Password strength validation enhancement
-- Auto-reject conflicting bookings when one is accepted
-
-### P2 (Future)
-- Push notification system
+### P2
 - Real-time chat between seeker and provider
-- Map-based shelter search
-- Admin dashboard with full user management
+- Email notifications for booking status changes
+- Admin analytics dashboard with charts
