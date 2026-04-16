@@ -172,7 +172,7 @@ const BookingsPage = () => {
                     <div className="flex flex-col gap-2">
                       {rejectingBookingId === booking.id ? (
                         <div className="space-y-2">
-                          <input type="text" value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Reason..." className="px-4 py-2 border border-[#e5e7eb] rounded-lg w-full focus:outline-none" data-testid={`reject-reason-input-${booking.id}`} />
+                          <textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Please provide a reason for rejection..." className="px-4 py-3 border border-[#e5e7eb] rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-[#e51636]/30 min-h-[100px] resize-none" data-testid={`reject-reason-input-${booking.id}`} />
                           <div className="flex gap-2">
                             <button onClick={() => handleReject(booking.id)} className="flex-1 bg-red-500 text-white hover:bg-red-600 px-4 py-2 rounded-lg text-sm" data-testid={`confirm-reject-${booking.id}`}>Confirm</button>
                             <button onClick={() => { setRejectingBookingId(null); setRejectReason(''); }} className="flex-1 bg-gray-200 text-gray-800 hover:bg-gray-300 px-4 py-2 rounded-lg text-sm">Cancel</button>

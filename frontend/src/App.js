@@ -58,7 +58,6 @@ function AppContent() {
         <Route path="/listings/my" element={<ProtectedRoute><MyListingsPage /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/bookings" element={<ProtectedRoute><BookingsPage /></ProtectedRoute>} />
-        <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
         <Route path="/verificator" element={<ProtectedRoute allowedRoles={['VERIFICATOR', 'ADMIN']}><VerificatorDashboard /></ProtectedRoute>} />

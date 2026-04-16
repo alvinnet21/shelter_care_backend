@@ -1,11 +1,16 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Home, LogOut, Bell, Settings, LayoutDashboard, Shield, UserCheck } from 'lucide-react';
+import { Home, LogOut, Settings, LayoutDashboard, Shield, UserCheck, ArrowLeft } from 'lucide-react';
+
+const MAIN_ROUTES = ['/', '/login', '/register', '/dashboard', '/admin', '/listings'];
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isDeepPage = user && !MAIN_ROUTES.includes(location.pathname);
 
   const handleLogout = () => {
     logout();
@@ -49,13 +54,15 @@ const Navbar = () => {
           <div className="flex items-center space-x-4">
             {user ? (
               <>
+                {isDeepPage && (
+                  <button onClick={() => navigate(-1)} className="flex items-center space-x-1 text-[#4b5563] hover:text-[#e51636] transition-colors" data-testid="nav-back">
+                    <ArrowLeft className="h-5 w-5" />
+                    <span className="hidden sm:inline">Back</span>
+                  </button>
+                )}
                 <Link to={getDashboardLink()} className="flex items-center space-x-1 text-[#4b5563] hover:text-[#e51636] transition-colors" data-testid="nav-dashboard">
                   <DashboardIcon className="h-5 w-5" />
                   <span className="hidden sm:inline">{getDashboardLabel()}</span>
-                </Link>
-                <Link to="/notifications" className="flex items-center space-x-1 text-[#4b5563] hover:text-[#e51636] transition-colors" data-testid="nav-notifications">
-                  <Bell className="h-5 w-5" />
-                  <span className="hidden sm:inline">Notifications</span>
                 </Link>
                 <Link to="/settings" className="flex items-center space-x-1 text-[#4b5563] hover:text-[#e51636] transition-colors" data-testid="nav-settings">
                   <Settings className="h-5 w-5" />
