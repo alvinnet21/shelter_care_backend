@@ -345,6 +345,10 @@ async def create_listing(req: CreateListingRequest, current_user: dict = Depends
 @api_router.get("/listings")
 async def get_listings(available_only: bool = True):
     listings = await listing_service.get_all_listings(available_only)
+    # Attach real review data from reviews collection
+    for listing in listings:
+        reviews = await review_repo.collection.find({"listing_id": listing["id"]}, {"_id": 0}).to_list(1000)
+        listing["reviews"] = reviews
     return {"listings": listings}
 
 @api_router.get("/listings/recommended")
@@ -382,6 +386,16 @@ async def get_listing(listing_id: str):
     provider = await user_repo.find_by_id(listing["provider_id"])
     if provider:
         listing["provider_photo"] = provider.get("profile_photo")
+    # Attach real reviews from reviews collection (last 5, with seeker info)
+    reviews = await review_repo.collection.find(
+        {"listing_id": listing_id}, {"_id": 0}
+    ).sort("created_at", -1).to_list(1000)
+    for r in reviews:
+        seeker = await user_repo.find_by_id(r.get("seeker_id", ""))
+        r["seeker_photo"] = seeker.get("profile_photo") if seeker else None
+        r["seeker_name"] = r.get("seeker_name") or (seeker.get("full_name") if seeker else "Unknown")
+    listing["reviews"] = reviews[:5]
+    listing["review_count"] = len(reviews)
     return listing
 
 @api_router.put("/listings/{listing_id}/block-dates")

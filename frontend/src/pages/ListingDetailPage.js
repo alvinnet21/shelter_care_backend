@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useProfileModal } from '../context/ProfileModalContext';
 import axios from 'axios';
-import { MapPin, Star, Calendar as CalendarIcon, ArrowLeft, Send } from 'lucide-react';
+import { MapPin, Star, Calendar as CalendarIcon, ArrowLeft, Send, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { Calendar } from '../components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
@@ -165,7 +165,7 @@ const ListingDetailPage = () => {
                 <Star className="h-6 w-6 text-yellow-500 fill-current mr-2" />
                 <div>
                   <p className="text-2xl font-bold text-[#111827]">{avgRating}</p>
-                  <p className="text-xs text-[#4b5563]">({listing.reviews?.length || 0} reviews)</p>
+                  <p className="text-xs text-[#4b5563]">({listing.review_count || listing.reviews?.length || 0} reviews)</p>
                 </div>
               </div>
             </div>
@@ -253,16 +253,27 @@ const ListingDetailPage = () => {
 
             {listing.reviews && listing.reviews.length > 0 && (
               <div className="border-t border-[#e5e7eb] pt-6">
-                <h2 className="text-xl font-semibold text-[#111827] mb-4">Reviews</h2>
+                <h2 className="text-xl font-semibold text-[#111827] mb-4">
+                  Reviews ({listing.review_count || listing.reviews.length})
+                </h2>
                 <div className="space-y-4">
                   {listing.reviews.map((review) => (
-                    <div key={review.id} className="bg-[#f9fafb] rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="font-medium text-[#111827]">{review.user_name}</p>
-                        <div className="flex items-center">
-                          {[...Array(review.rating)].map((_, i) => (
-                            <Star key={i} className="h-4 w-4 text-yellow-500 fill-current" />
-                          ))}
+                    <div key={review.id} className="bg-[#f9fafb] rounded-lg p-4" data-testid={`review-${review.id}`}>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-full bg-[#e51636] flex items-center justify-center text-white font-medium overflow-hidden flex-shrink-0">
+                          {review.seeker_photo ? (
+                            <img src={review.seeker_photo} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <User className="h-5 w-5 text-white" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-[#111827]">{review.seeker_name || review.user_name}</p>
+                          <div className="flex items-center">
+                            {[...Array(review.rating)].map((_, i) => (
+                              <Star key={i} className="h-4 w-4 text-yellow-500 fill-current" />
+                            ))}
+                          </div>
                         </div>
                       </div>
                       <p className="text-[#4b5563]">{review.comment}</p>

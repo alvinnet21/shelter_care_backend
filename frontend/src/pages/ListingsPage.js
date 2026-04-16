@@ -2,9 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { MapPin, Star, Eye, Home as HomeIcon, Search, Map } from 'lucide-react';
+import { MapPin, Star, Eye, Home as HomeIcon, Search } from 'lucide-react';
 import { toast } from 'sonner';
-import MapView from '../components/MapView';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -15,7 +14,6 @@ const ListingsPage = () => {
   const [filteredListings, setFilteredListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState('grid');
 
   useEffect(() => {
     fetchListings();
@@ -85,36 +83,9 @@ const ListingsPage = () => {
           </div>
 
           <div className="flex items-center justify-end">
-            <div className="flex items-center space-x-4">
-              <p className="text-sm text-[#4b5563]">
-                Showing {filteredListings.length} of {listings.length} shelters
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`px-4 py-2 rounded-lg transition-all ${
-                    viewMode === 'grid'
-                      ? 'bg-[#e51636] text-white'
-                      : 'bg-[#f3f4f6] text-[#111827] hover:bg-[#e5e7eb]'
-                  }`}
-                  data-testid="view-grid-button"
-                >
-                  Grid
-                </button>
-                <button
-                  onClick={() => setViewMode('map')}
-                  className={`px-4 py-2 rounded-lg transition-all flex items-center space-x-2 ${
-                    viewMode === 'map'
-                      ? 'bg-[#e51636] text-white'
-                      : 'bg-[#f3f4f6] text-[#111827] hover:bg-[#e5e7eb]'
-                  }`}
-                  data-testid="view-map-button"
-                >
-                  <Map className="h-4 w-4" />
-                  <span>Map</span>
-                </button>
-              </div>
-            </div>
+            <p className="text-sm text-[#4b5563]">
+              Showing {filteredListings.length} of {listings.length} shelters
+            </p>
           </div>
         </div>
 
@@ -132,11 +103,6 @@ const ListingsPage = () => {
               {searchTerm ? 'Try different keywords' : 'Check back later for new listings'}
             </p>
           </div>
-        ) : viewMode === 'map' ? (
-          <MapView
-            listings={filteredListings}
-            onMarkerClick={(listingId) => navigate(`/listings/${listingId}`)}
-          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredListings.map((listing) => (
