@@ -17,6 +17,8 @@ const EditListingPage = () => {
     title: '',
     description: '',
     address: '',
+    suburb: '',
+    postcode: '',
     is_available: true
   });
   const [images, setImages] = useState([]);
@@ -45,6 +47,8 @@ const EditListingPage = () => {
         title: listing.title,
         description: listing.description,
         address: listing.address,
+        suburb: listing.suburb || '',
+        postcode: listing.postcode || '',
         is_available: listing.is_available
       });
       setImages(listing.photos || []);
@@ -143,10 +147,23 @@ const EditListingPage = () => {
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 className="w-full px-4 py-3 border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e51636]/30 focus:border-[#e51636]"
-                placeholder="123 Main St, City, Country"
+                placeholder="123 Main St"
                 required
                 data-testid="edit-listing-address-input"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#111827] mb-2">Suburb</label>
+                <input type="text" value={formData.suburb} onChange={(e) => setFormData({ ...formData, suburb: e.target.value })}
+                  className="w-full px-4 py-3 border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e51636]/30" placeholder="Parramatta" required data-testid="edit-listing-suburb-input" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#111827] mb-2">Postcode</label>
+                <input type="text" value={formData.postcode} onChange={(e) => setFormData({ ...formData, postcode: e.target.value })}
+                  className="w-full px-4 py-3 border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e51636]/30" placeholder="2150" required data-testid="edit-listing-postcode-input" />
+              </div>
             </div>
 
             <div>

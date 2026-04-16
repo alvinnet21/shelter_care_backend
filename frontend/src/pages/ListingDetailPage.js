@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { MapPin, Star, Calendar as CalendarIcon, ArrowLeft, Send } from 'lucide-react';
@@ -179,7 +179,7 @@ const ListingDetailPage = () => {
                 </h1>
                 <div className="flex items-center text-[#4b5563] mb-2">
                   <MapPin className="h-5 w-5 mr-2" />
-                  <span>{listing.address}</span>
+                  <span>{listing.address}{listing.suburb ? `, ${listing.suburb}` : ''}{listing.postcode ? ` ${listing.postcode}` : ''}</span>
                 </div>
                 <p className="text-[#4b5563]">Hosted by {listing.provider_name}</p>
               </div>
@@ -190,6 +190,20 @@ const ListingDetailPage = () => {
                   <p className="text-xs text-[#4b5563]">({listing.reviews?.length || 0} reviews)</p>
                 </div>
               </div>
+            </div>
+
+            {/* Who owns this space */}
+            <div className="border-t border-[#e5e7eb] pt-6 mb-6">
+              <h2 className="text-xl font-semibold text-[#111827] mb-4">Who owns this space</h2>
+              <Link to={`/profile/${listing.provider_id}`} className="flex items-center gap-4 p-4 bg-[#f9fafb] rounded-lg hover:bg-[#f3f4f6] transition-all" data-testid="provider-profile-link">
+                <div className="w-14 h-14 rounded-full bg-[#e51636] flex items-center justify-center text-white font-bold text-xl overflow-hidden flex-shrink-0">
+                  {listing.provider_photo ? <img src={listing.provider_photo} alt="" className="w-full h-full object-cover" /> : listing.provider_name?.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-semibold text-[#111827] hover:text-[#e51636] transition-colors">{listing.provider_name}</p>
+                  <p className="text-sm text-[#4b5563]">View profile</p>
+                </div>
+              </Link>
             </div>
 
             <div className="border-t border-[#e5e7eb] pt-6 mb-6">

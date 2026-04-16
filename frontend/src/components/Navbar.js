@@ -12,7 +12,6 @@ const Navbar = () => {
     navigate('/');
   };
 
-  // Determine dashboard link based on user role
   const getDashboardLink = () => {
     if (!user) return '/dashboard';
     if (user.role === 'ADMIN') return '/admin';
@@ -50,55 +49,27 @@ const Navbar = () => {
           <div className="flex items-center space-x-4">
             {user ? (
               <>
-                <Link
-                  to={getDashboardLink()}
-                  className="flex items-center space-x-1 text-[#4b5563] hover:text-[#e51636] transition-colors"
-                  data-testid="nav-dashboard"
-                >
+                <Link to={getDashboardLink()} className="flex items-center space-x-1 text-[#4b5563] hover:text-[#e51636] transition-colors" data-testid="nav-dashboard">
                   <DashboardIcon className="h-5 w-5" />
                   <span className="hidden sm:inline">{getDashboardLabel()}</span>
                 </Link>
-                <Link
-                  to="/notifications"
-                  className="flex items-center space-x-1 text-[#4b5563] hover:text-[#e51636] transition-colors"
-                  data-testid="nav-notifications"
-                >
+                <Link to="/notifications" className="flex items-center space-x-1 text-[#4b5563] hover:text-[#e51636] transition-colors" data-testid="nav-notifications">
                   <Bell className="h-5 w-5" />
                   <span className="hidden sm:inline">Notifications</span>
                 </Link>
-                <Link
-                  to="/settings"
-                  className="flex items-center space-x-1 text-[#4b5563] hover:text-[#e51636] transition-colors"
-                  data-testid="nav-settings"
-                >
+                <Link to="/settings" className="flex items-center space-x-1 text-[#4b5563] hover:text-[#e51636] transition-colors" data-testid="nav-settings">
                   <Settings className="h-5 w-5" />
                   <span className="hidden sm:inline">Settings</span>
                 </Link>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center space-x-1 bg-[#e51636] text-white hover:bg-[#c4122f] px-4 py-2 rounded-lg transition-all"
-                  data-testid="nav-logout"
-                >
+                <button onClick={handleLogout} className="flex items-center space-x-1 bg-[#e51636] text-white hover:bg-[#c4122f] px-4 py-2 rounded-lg transition-all" data-testid="nav-logout">
                   <LogOut className="h-5 w-5" />
                   <span className="hidden sm:inline">Logout</span>
                 </button>
               </>
             ) : (
               <>
-                <Link
-                  to="/login"
-                  className="text-[#4b5563] hover:text-[#e51636] transition-colors"
-                  data-testid="nav-login"
-                >
-                  Login
-                </Link>
-                <Link
-                  to="/register"
-                  className="bg-[#e51636] text-white hover:bg-[#c4122f] px-6 py-2 rounded-lg transition-all"
-                  data-testid="nav-register"
-                >
-                  Get Started
-                </Link>
+                <Link to="/login" className="text-[#4b5563] hover:text-[#e51636] transition-colors" data-testid="nav-login">Login</Link>
+                <Link to="/register" className="bg-[#e51636] text-white hover:bg-[#c4122f] px-6 py-2 rounded-lg transition-all" data-testid="nav-register">Get Started</Link>
               </>
             )}
           </div>

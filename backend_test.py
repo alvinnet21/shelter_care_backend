@@ -449,6 +449,343 @@ class ShelterLinkAPITester:
         else:
             self.log_result("Manual date blocking", False, f"Status: {response.status_code if response else 'No response'}")
 
+    def test_admin_login(self):
+        """Test admin login with existing credentials"""
+        print("\n🔍 Testing Admin Login...")
+        
+        admin_data = {
+            "email": "admin@test.com",
+            "password": "password123"
+        }
+        
+        success, response = self.make_request('POST', 'auth/login', admin_data, expected_status=200)
+        if success:
+            response_data = response.json()
+            if response_data.get("token") and response_data.get("user", {}).get("role") == "ADMIN":
+                self.tokens["admin"] = response_data["token"]
+                self.log_result("Admin login", True)
+            else:
+                self.log_result("Admin login", False, "Missing token or wrong role")
+        else:
+            self.log_result("Admin login", False, f"Status: {response.status_code if response else 'No response'}")
+
+    def test_admin_stats_api(self):
+        """Test admin stats API returns total users, bookings, listings"""
+        print("\n🔍 Testing Admin Stats API...")
+        
+        if "admin" not in self.tokens:
+            self.log_result("Admin stats API", False, "No admin token available")
+            return
+        
+        success, response = self.make_request('GET', 'admin/stats', token=self.tokens["admin"])
+        
+        if success:
+            response_data = response.json()
+            required_fields = ["total_users", "total_bookings", "total_listings"]
+            has_all_fields = all(field in response_data for field in required_fields)
+            
+            if has_all_fields:
+                self.log_result("Admin stats API", True)
+            else:
+                missing = [f for f in required_fields if f not in response_data]
+                self.log_result("Admin stats API", False, f"Missing fields: {missing}")
+        else:
+            self.log_result("Admin stats API", False, f"Status: {response.status_code if response else 'No response'}")
+
+    def test_admin_user_management(self):
+        """Test admin user management APIs"""
+        print("\n🔍 Testing Admin User Management...")
+        
+        if "admin" not in self.tokens:
+            self.log_result("Admin user management", False, "No admin token available")
+            return
+        
+        # Test get all users
+        success, response = self.make_request('GET', 'admin/users', token=self.tokens["admin"])
+        
+        if success:
+            response_data = response.json()
+            users = response_data.get("users", [])
+            
+            if isinstance(users, list) and len(users) > 0:
+                # Find a non-admin user to test soft delete
+                test_user = None
+                for user in users:
+                    if user.get("role") != "ADMIN":
+                        test_user = user
+                        break
+                
+                if test_user:
+                    user_id = test_user["id"]
+                    
+                    # Test soft delete
+                    delete_success, delete_response = self.make_request(
+                        'PUT', 
+                        f'admin/users/{user_id}/delete', 
+                        token=self.tokens["admin"]
+                    )
+                    
+                    if delete_success:
+                        self.log_result("Admin user soft delete", True)
+                    else:
+                        self.log_result("Admin user soft delete", False, f"Delete failed: {delete_response.status_code if delete_response else 'No response'}")
+                else:
+                    self.log_result("Admin user management", False, "No non-admin users found to test delete")
+            else:
+                self.log_result("Admin user management", False, "No users returned or invalid format")
+        else:
+            self.log_result("Admin user management", False, f"Status: {response.status_code if response else 'No response'}")
+
+    def test_admin_listing_management(self):
+        """Test admin listing management APIs"""
+        print("\n🔍 Testing Admin Listing Management...")
+        
+        if "admin" not in self.tokens:
+            self.log_result("Admin listing management", False, "No admin token available")
+            return
+        
+        # Test get all listings
+        success, response = self.make_request('GET', 'admin/listings', token=self.tokens["admin"])
+        
+        if success:
+            response_data = response.json()
+            listings = response_data.get("listings", [])
+            
+            if isinstance(listings, list):
+                if self.listing_id:
+                    # Test soft delete listing
+                    delete_success, delete_response = self.make_request(
+                        'PUT', 
+                        f'admin/listings/{self.listing_id}/delete', 
+                        token=self.tokens["admin"]
+                    )
+                    
+                    if delete_success:
+                        self.log_result("Admin listing takedown", True)
+                    else:
+                        self.log_result("Admin listing takedown", False, f"Takedown failed: {delete_response.status_code if delete_response else 'No response'}")
+                else:
+                    self.log_result("Admin listing management", True, "Listings API works (no test listing to delete)")
+            else:
+                self.log_result("Admin listing management", False, "Invalid listings format")
+        else:
+            self.log_result("Admin listing management", False, f"Status: {response.status_code if response else 'No response'}")
+
+    def test_public_profile_api(self):
+        """Test public profile API for different user roles"""
+        print("\n🔍 Testing Public Profile API...")
+        
+        # Test with seeker profile
+        if "seeker3" in self.tokens:
+            # Get seeker user ID from token (we'll use a known seeker)
+            success, response = self.make_request('GET', 'auth/me', token=self.tokens["seeker3"])
+            
+            if success:
+                user_data = response.json()
+                user_id = user_data.get("id")
+                
+                if user_id:
+                    # Test public profile access
+                    profile_success, profile_response = self.make_request('GET', f'users/{user_id}/profile')
+                    
+                    if profile_success:
+                        profile_data = profile_response.json()
+                        
+                        # Check seeker profile shows phone number
+                        if profile_data.get("role") == "SEEKER":
+                            has_phone = "phone_number" in profile_data
+                            self.log_result("Public profile API - Seeker shows phone", has_phone)
+                        else:
+                            self.log_result("Public profile API - Seeker", False, "Wrong role returned")
+                    else:
+                        self.log_result("Public profile API - Seeker", False, f"Profile fetch failed: {profile_response.status_code if profile_response else 'No response'}")
+                else:
+                    self.log_result("Public profile API - Seeker", False, "No user ID found")
+            else:
+                self.log_result("Public profile API - Seeker", False, "Failed to get user info")
+
+        # Test with provider profile
+        if "provider_verified" in self.tokens:
+            success, response = self.make_request('GET', 'auth/me', token=self.tokens["provider_verified"])
+            
+            if success:
+                user_data = response.json()
+                user_id = user_data.get("id")
+                
+                if user_id:
+                    profile_success, profile_response = self.make_request('GET', f'users/{user_id}/profile')
+                    
+                    if profile_success:
+                        profile_data = profile_response.json()
+                        
+                        # Check provider profile shows listings but no phone
+                        if profile_data.get("role") == "PROVIDER":
+                            has_listings = "listings" in profile_data
+                            has_reviews = "last_reviews" in profile_data
+                            no_phone = "phone_number" not in profile_data
+                            
+                            if has_listings and has_reviews and no_phone:
+                                self.log_result("Public profile API - Provider shows listings, no phone", True)
+                            else:
+                                self.log_result("Public profile API - Provider", False, f"Missing fields - listings: {has_listings}, reviews: {has_reviews}, no_phone: {no_phone}")
+                        else:
+                            self.log_result("Public profile API - Provider", False, "Wrong role returned")
+                    else:
+                        self.log_result("Public profile API - Provider", False, f"Profile fetch failed: {profile_response.status_code if profile_response else 'No response'}")
+
+    def test_bookings_with_phone_visibility(self):
+        """Test that provider can see seeker phone in booking requests"""
+        print("\n🔍 Testing Booking Phone Visibility...")
+        
+        if "provider_verified" not in self.tokens:
+            self.log_result("Booking phone visibility", False, "No provider token available")
+            return
+        
+        # Get provider bookings
+        success, response = self.make_request('GET', 'bookings/me', token=self.tokens["provider_verified"])
+        
+        if success:
+            response_data = response.json()
+            bookings = response_data.get("bookings", [])
+            
+            if bookings:
+                # Check if any booking has seeker phone
+                has_phone_info = any(booking.get("seeker_phone") for booking in bookings)
+                
+                if has_phone_info:
+                    self.log_result("Booking phone visibility", True)
+                else:
+                    self.log_result("Booking phone visibility", False, "No seeker phone found in bookings")
+            else:
+                self.log_result("Booking phone visibility", True, "No bookings to test (API works)")
+        else:
+            self.log_result("Booking phone visibility", False, f"Status: {response.status_code if response else 'No response'}")
+
+    def test_listing_with_address_fields(self):
+        """Test listing creation with separate address, suburb, postcode fields"""
+        print("\n🔍 Testing Listing Address Fields...")
+        
+        if "provider_verified" not in self.tokens:
+            self.log_result("Listing address fields", False, "No provider token available")
+            return
+        
+        listing_data = {
+            "title": "Address Test Shelter",
+            "description": "Test shelter for address field separation",
+            "address": "456 Test Avenue",
+            "suburb": "Testville",
+            "postcode": "2000",
+            "photos": ["https://example.com/photo1.jpg"]
+        }
+        
+        success, response = self.make_request('POST', 'listings', listing_data, token=self.tokens["provider_verified"], expected_status=200)
+        
+        if success:
+            response_data = response.json()
+            listing = response_data.get("listing", {})
+            
+            # Check all address fields are present
+            has_address = listing.get("address") == "456 Test Avenue"
+            has_suburb = listing.get("suburb") == "Testville"
+            has_postcode = listing.get("postcode") == "2000"
+            
+            if has_address and has_suburb and has_postcode:
+                self.log_result("Listing address fields", True)
+            else:
+                self.log_result("Listing address fields", False, f"Missing fields - address: {has_address}, suburb: {has_suburb}, postcode: {has_postcode}")
+        else:
+            self.log_result("Listing address fields", False, f"Status: {response.status_code if response else 'No response'}")
+
+    def test_profile_update_with_phone(self):
+        """Test profile update with phone number (+61 prefix)"""
+        print("\n🔍 Testing Profile Update with Phone...")
+        
+        if "seeker3" not in self.tokens:
+            self.log_result("Profile update with phone", False, "No seeker token available")
+            return
+        
+        profile_data = {
+            "full_name": "Updated Seeker Name",
+            "phone_number": "+61412345678",
+            "description": "Updated description",
+            "date_of_birth": "1990-01-01"
+        }
+        
+        success, response = self.make_request('PUT', 'auth/profile', profile_data, token=self.tokens["seeker3"])
+        
+        if success:
+            # Verify the update by getting profile
+            verify_success, verify_response = self.make_request('GET', 'auth/me', token=self.tokens["seeker3"])
+            
+            if verify_success:
+                user_data = verify_response.json()
+                
+                has_phone = user_data.get("phone_number") == "+61412345678"
+                has_name = user_data.get("full_name") == "Updated Seeker Name"
+                has_dob = user_data.get("date_of_birth") == "1990-01-01"
+                
+                if has_phone and has_name and has_dob:
+                    self.log_result("Profile update with phone", True)
+                else:
+                    self.log_result("Profile update with phone", False, f"Update failed - phone: {has_phone}, name: {has_name}, dob: {has_dob}")
+            else:
+                self.log_result("Profile update with phone", False, "Failed to verify update")
+        else:
+            self.log_result("Profile update with phone", False, f"Status: {response.status_code if response else 'No response'}")
+
+    def test_soft_deleted_user_cannot_login(self):
+        """Test that soft deleted user cannot login"""
+        print("\n🔍 Testing Soft Deleted User Cannot Login...")
+        
+        # First create a test user to delete
+        test_user_data = {
+            "email": "delete_test@test.com",
+            "full_name": "Delete Test User",
+            "password": "password123",
+            "role": "SEEKER",
+            "question_answer": "Test situation"
+        }
+        
+        reg_success, reg_response = self.make_request('POST', 'auth/register', test_user_data, expected_status=200)
+        
+        if reg_success:
+            # Login to get user ID
+            login_data = {
+                "email": "delete_test@test.com",
+                "password": "password123"
+            }
+            
+            login_success, login_response = self.make_request('POST', 'auth/login', login_data, expected_status=200)
+            
+            if login_success:
+                user_data = login_response.json()
+                user_id = user_data.get("user", {}).get("id")
+                
+                if user_id and "admin" in self.tokens:
+                    # Soft delete the user
+                    delete_success, delete_response = self.make_request(
+                        'PUT', 
+                        f'admin/users/{user_id}/delete', 
+                        token=self.tokens["admin"]
+                    )
+                    
+                    if delete_success:
+                        # Try to login again - should fail
+                        retry_success, retry_response = self.make_request('POST', 'auth/login', login_data, expected_status=401)
+                        
+                        if retry_success or (retry_response and retry_response.status_code == 401):
+                            self.log_result("Soft deleted user cannot login", True)
+                        else:
+                            self.log_result("Soft deleted user cannot login", False, f"Login should have failed but got: {retry_response.status_code if retry_response else 'No response'}")
+                    else:
+                        self.log_result("Soft deleted user cannot login", False, "Failed to delete user")
+                else:
+                    self.log_result("Soft deleted user cannot login", False, "Missing user ID or admin token")
+            else:
+                self.log_result("Soft deleted user cannot login", False, "Failed to login test user")
+        else:
+            self.log_result("Soft deleted user cannot login", False, "Failed to create test user")
+
     def run_all_tests(self):
         """Run all backend tests"""
         print("🚀 Starting ShelterLink Backend API Tests...")
@@ -471,6 +808,18 @@ class ShelterLinkAPITester:
         self.test_create_accepted_booking()
         self.test_listing_availability_api()
         self.test_manual_date_blocking()
+        
+        # New feature tests for major update
+        print("\n🆕 Starting Major Update Feature Tests...")
+        self.test_admin_login()
+        self.test_admin_stats_api()
+        self.test_admin_user_management()
+        self.test_admin_listing_management()
+        self.test_public_profile_api()
+        self.test_bookings_with_phone_visibility()
+        self.test_listing_with_address_fields()
+        self.test_profile_update_with_phone()
+        self.test_soft_deleted_user_cannot_login()
         
         # Summary
         print(f"\n📊 Test Summary:")

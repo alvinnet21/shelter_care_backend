@@ -100,6 +100,10 @@ class AuthService:
         if not user:
             return None
 
+        # Check if user is soft-deleted
+        if user.get("deleted_at"):
+            return {"error": "deleted", "message": "This account has been deactivated. Please contact support."}
+
         if not self.verify_password(password, user["password"]):
             return None
 

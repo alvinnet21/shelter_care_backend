@@ -13,6 +13,9 @@ class User(BaseModel, ABC):
     password: str
     role: str
     profile_photo: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    description: Optional[str] = None
+    deleted_at: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     class Config:
@@ -23,6 +26,7 @@ class ShelterSeeker(User):
     """Shelter Seeker extends User"""
     question_answer: Optional[str] = None
     booking_history: List[str] = Field(default_factory=list)
+    phone_number: Optional[str] = None
     role: str = "SEEKER"
 
 
@@ -32,6 +36,7 @@ class Provider(User):
     incoming_bookings: List[str] = Field(default_factory=list)
     id_document: Optional[str] = None
     police_check: Optional[str] = None
+    phone_number: Optional[str] = None
     is_verified: bool = False
     verification_status: str = "PENDING"
     verification_reason: Optional[str] = None

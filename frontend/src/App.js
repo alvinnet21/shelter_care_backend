@@ -17,6 +17,7 @@ import NotificationsPage from './pages/NotificationsPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminDashboard from './pages/AdminDashboard';
 import VerificatorDashboard from './pages/VerificatorDashboard';
+import ProfilePage from './pages/ProfilePage';
 import '@/App.css';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -34,7 +35,6 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" />;
   }
 
-  // Check role-based access if allowedRoles is specified
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/dashboard" />;
   }
@@ -52,78 +52,16 @@ function AppContent() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/listings" element={<ListingsPage />} />
         <Route path="/listings/:id" element={<ListingDetailPage />} />
-        <Route
-          path="/listings/create"
-          element={
-            <ProtectedRoute>
-              <CreateListingPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/listings/:id/edit"
-          element={
-            <ProtectedRoute>
-              <EditListingPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/listings/my"
-          element={
-            <ProtectedRoute>
-              <MyListingsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/bookings"
-          element={
-            <ProtectedRoute>
-              <BookingsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/notifications"
-          element={
-            <ProtectedRoute>
-              <NotificationsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <SettingsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute allowedRoles={['ADMIN']}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/verificator"
-          element={
-            <ProtectedRoute allowedRoles={['VERIFICATOR']}>
-              <VerificatorDashboard />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/profile/:id" element={<ProfilePage />} />
+        <Route path="/listings/create" element={<ProtectedRoute><CreateListingPage /></ProtectedRoute>} />
+        <Route path="/listings/:id/edit" element={<ProtectedRoute><EditListingPage /></ProtectedRoute>} />
+        <Route path="/listings/my" element={<ProtectedRoute><MyListingsPage /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/bookings" element={<ProtectedRoute><BookingsPage /></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/verificator" element={<ProtectedRoute allowedRoles={['VERIFICATOR', 'ADMIN']}><VerificatorDashboard /></ProtectedRoute>} />
       </Routes>
       <Toaster position="bottom-right" />
     </div>
