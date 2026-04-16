@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 
 class ShelterLinkAPITester:
-    def __init__(self, base_url="https://shelter-calendar-pro.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://admin-panel-update-37.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.tokens = {}
         self.listing_id = None
