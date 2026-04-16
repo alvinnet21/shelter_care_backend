@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useProfileModal } from '../context/ProfileModalContext';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { Calendar, User, CheckCircle, XCircle, Clock, AlertCircle, Star, Ban, ClipboardList, History, Phone } from 'lucide-react';
@@ -9,6 +10,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const BookingsPage = () => {
   const { user, token } = useAuth();
+  const { openProfile } = useProfileModal();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [bookings, setBookings] = useState([]);
@@ -142,7 +144,7 @@ const BookingsPage = () => {
                         <div className="flex items-center gap-4">
                           <div className="flex items-center">
                             <User className="h-4 w-4 mr-2" />
-                            <Link to={`/profile/${booking.seeker_id}`} className="text-[#e51636] hover:underline">{booking.seeker_name}</Link>
+                            <button onClick={() => openProfile(booking.seeker_id)} className="text-[#e51636] hover:underline">{booking.seeker_name}</button>
                           </div>
                           {booking.seeker_phone && (
                             <div className="flex items-center"><Phone className="h-4 w-4 mr-1 text-[#9ca3af]" /><span>{booking.seeker_phone}</span></div>

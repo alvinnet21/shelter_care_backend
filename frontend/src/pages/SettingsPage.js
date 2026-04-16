@@ -116,23 +116,29 @@ const SettingsPage = () => {
                     className="w-full pl-10 pr-4 py-3 border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e51636]/30" data-testid="settings-fullname" />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-[#111827] mb-2">Date of Birth</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9ca3af]" />
-                  <input type="date" value={profile.date_of_birth} onChange={(e) => setProfile({ ...profile, date_of_birth: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e51636]/30" data-testid="settings-dob" />
+              {/* Date of Birth - hide for ADMIN and VERIFICATOR */}
+              {user.role !== 'ADMIN' && user.role !== 'VERIFICATOR' && (
+                <div>
+                  <label className="block text-sm font-medium text-[#111827] mb-2">Date of Birth</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9ca3af]" />
+                    <input type="date" value={profile.date_of_birth} onChange={(e) => setProfile({ ...profile, date_of_birth: e.target.value })}
+                      className="w-full pl-10 pr-4 py-3 border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e51636]/30" data-testid="settings-dob" />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#111827] mb-2">Tell me about yourself</label>
-                <div className="relative">
-                  <FileText className="absolute left-3 top-3 h-5 w-5 text-[#9ca3af]" />
-                  <textarea value={profile.description} onChange={(e) => setProfile({ ...profile, description: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e51636]/30 min-h-[100px]"
-                    placeholder="Tell us about yourself..." data-testid="settings-description" />
+              )}
+              {/* Tell me about yourself - hide for ADMIN and VERIFICATOR */}
+              {user.role !== 'ADMIN' && user.role !== 'VERIFICATOR' && (
+                <div>
+                  <label className="block text-sm font-medium text-[#111827] mb-2">Tell me about yourself</label>
+                  <div className="relative">
+                    <FileText className="absolute left-3 top-3 h-5 w-5 text-[#9ca3af]" />
+                    <textarea value={profile.description} onChange={(e) => setProfile({ ...profile, description: e.target.value })}
+                      className="w-full pl-10 pr-4 py-3 border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e51636]/30 min-h-[100px]"
+                      placeholder="Tell us about yourself..." data-testid="settings-description" />
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Phone - only for Provider and Seeker */}
               {(user.role === 'PROVIDER' || user.role === 'SEEKER') && (

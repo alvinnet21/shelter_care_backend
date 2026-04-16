@@ -1,8 +1,10 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ProfileModalProvider } from './context/ProfileModalContext';
 import { Toaster } from './components/ui/sonner';
 import Navbar from './components/Navbar';
+import ProfileModal from './components/ProfileModal';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -17,7 +19,6 @@ import NotificationsPage from './pages/NotificationsPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminDashboard from './pages/AdminDashboard';
 import VerificatorDashboard from './pages/VerificatorDashboard';
-import ProfilePage from './pages/ProfilePage';
 import '@/App.css';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -52,7 +53,6 @@ function AppContent() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/listings" element={<ListingsPage />} />
         <Route path="/listings/:id" element={<ListingDetailPage />} />
-        <Route path="/profile/:id" element={<ProfilePage />} />
         <Route path="/listings/create" element={<ProtectedRoute><CreateListingPage /></ProtectedRoute>} />
         <Route path="/listings/:id/edit" element={<ProtectedRoute><EditListingPage /></ProtectedRoute>} />
         <Route path="/listings/my" element={<ProtectedRoute><MyListingsPage /></ProtectedRoute>} />
@@ -62,6 +62,7 @@ function AppContent() {
         <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
         <Route path="/verificator" element={<ProtectedRoute allowedRoles={['VERIFICATOR', 'ADMIN']}><VerificatorDashboard /></ProtectedRoute>} />
       </Routes>
+      <ProfileModal />
       <Toaster position="bottom-right" />
     </div>
   );
@@ -71,7 +72,9 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppContent />
+        <ProfileModalProvider>
+          <AppContent />
+        </ProfileModalProvider>
       </AuthProvider>
     </BrowserRouter>
   );

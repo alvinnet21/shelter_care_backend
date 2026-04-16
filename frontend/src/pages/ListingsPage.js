@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { MapPin, Star, Eye, Home as HomeIcon, Search, Filter, Map } from 'lucide-react';
+import { MapPin, Star, Eye, Home as HomeIcon, Search, Map } from 'lucide-react';
 import { toast } from 'sonner';
 import MapView from '../components/MapView';
 
@@ -15,7 +15,6 @@ const ListingsPage = () => {
   const [filteredListings, setFilteredListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAvailableOnly, setShowAvailableOnly] = useState(true);
   const [viewMode, setViewMode] = useState('grid');
 
   useEffect(() => {
@@ -24,7 +23,7 @@ const ListingsPage = () => {
 
   useEffect(() => {
     filterListings();
-  }, [searchTerm, showAvailableOnly, listings]);
+  }, [searchTerm, listings]);
 
   const fetchListings = async () => {
     try {
@@ -40,11 +39,6 @@ const ListingsPage = () => {
 
   const filterListings = () => {
     let filtered = [...listings];
-
-    if (showAvailableOnly) {
-      filtered = filtered.filter(l => l.is_available);
-    }
-
     if (searchTerm) {
       filtered = filtered.filter(l =>
         l.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -52,7 +46,6 @@ const ListingsPage = () => {
         l.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-
     setFilteredListings(filtered);
   };
 
@@ -90,21 +83,8 @@ const ListingsPage = () => {
               data-testid="search-listings-input"
             />
           </div>
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Filter className="h-5 w-5 text-[#4b5563]" />
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showAvailableOnly}
-                  onChange={(e) => setShowAvailableOnly(e.target.checked)}
-                  className="w-4 h-4 text-[#e51636] border-[#e5e7eb] rounded focus:ring-[#e51636]"
-                  data-testid="filter-available-checkbox"
-                />
-                <span className="text-[#4b5563]">Show available only</span>
-              </label>
-            </div>
+
+          <div className="flex items-center justify-end">
             <div className="flex items-center space-x-4">
               <p className="text-sm text-[#4b5563]">
                 Showing {filteredListings.length} of {listings.length} shelters
@@ -153,8 +133,8 @@ const ListingsPage = () => {
             </p>
           </div>
         ) : viewMode === 'map' ? (
-          <MapView 
-            listings={filteredListings} 
+          <MapView
+            listings={filteredListings}
             onMarkerClick={(listingId) => navigate(`/listings/${listingId}`)}
           />
         ) : (

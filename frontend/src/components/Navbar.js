@@ -44,22 +44,26 @@ const Navbar = () => {
     <nav className="bg-white/80 backdrop-blur-xl border-b border-[#e5e7eb]/50 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <Link to="/" className="flex items-center space-x-2" data-testid="nav-logo">
-            <Home className="h-8 w-8 text-[#e51636]" />
-            <span className="text-2xl font-bold text-[#111827]" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              ShelterLink
-            </span>
-          </Link>
+          {/* Left: Logo + Back button */}
+          <div className="flex items-center space-x-3">
+            <Link to="/" className="flex items-center space-x-2" data-testid="nav-logo">
+              <Home className="h-8 w-8 text-[#e51636]" />
+              <span className="text-2xl font-bold text-[#111827]" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                ShelterLink
+              </span>
+            </Link>
+            {/* Back button moved to right of ShelterLink */}
+            {user && isDeepPage && (
+              <button onClick={() => navigate(-1)} className="flex items-center space-x-1 text-[#4b5563] hover:text-[#e51636] transition-colors ml-2" data-testid="nav-back">
+                <ArrowLeft className="h-5 w-5" />
+                <span className="hidden sm:inline">Back</span>
+              </button>
+            )}
+          </div>
 
           <div className="flex items-center space-x-4">
             {user ? (
               <>
-                {isDeepPage && (
-                  <button onClick={() => navigate(-1)} className="flex items-center space-x-1 text-[#4b5563] hover:text-[#e51636] transition-colors" data-testid="nav-back">
-                    <ArrowLeft className="h-5 w-5" />
-                    <span className="hidden sm:inline">Back</span>
-                  </button>
-                )}
                 <Link to={getDashboardLink()} className="flex items-center space-x-1 text-[#4b5563] hover:text-[#e51636] transition-colors" data-testid="nav-dashboard">
                   <DashboardIcon className="h-5 w-5" />
                   <span className="hidden sm:inline">{getDashboardLabel()}</span>
