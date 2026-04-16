@@ -1,6 +1,16 @@
 # ShelterLink Test Credentials
 
-## Admin
+## Admin (Default Seed)
+- **Email:** admin@gmail.com
+- **Password:** 123456
+- **Role:** ADMIN
+
+## Verificator (Default Seed)
+- **Email:** verificator@gmail.com
+- **Password:** 123456
+- **Role:** VERIFICATOR
+
+## Admin (Legacy)
 - **Email:** admin@test.com
 - **Password:** password123
 - **Role:** ADMIN
@@ -22,14 +32,14 @@
 - **Role:** PROVIDER
 - **Verification Status:** APPROVED
 
-## Verificator
+## Verificator (Legacy)
 - **Email:** verificator@test.com
 - **Password:** password123
 - **Role:** VERIFICATOR
 
 ## Notes
-- `seeker@test.com` had its password reset via forgot-password feature
+- Default Admin and Verificator are auto-seeded on backend startup if they don't exist
 - Provider requires ID Document + Police Check upload during registration
-- Provider cannot login until approved by Verificator
+- Provider cannot login until approved by Verificator/Admin
 - Admin can soft-delete users and listings
 - Deleted users cannot login

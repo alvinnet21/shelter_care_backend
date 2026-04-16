@@ -599,6 +599,24 @@ app.add_middleware(
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+@app.on_event("startup")
+async def seed_default_users():
+    """Create default Admin and Verificator users if they don't exist"""
+    seed_users = [
+        {"email": "admin@gmail.com", "full_name": "Admin", "password": "123456", "role": "ADMIN"},
+        {"email": "verificator@gmail.com", "full_name": "Verificator", "password": "123456", "role": "VERIFICATOR"},
+    ]
+    for u in seed_users:
+        existing = await user_repo.find_by_email(u["email"])
+        if not existing:
+            await auth_service.register(
+                email=u["email"], full_name=u["full_name"],
+                password=u["password"], role=u["role"]
+            )
+            logger.info(f"Seeded default user: {u['email']} ({u['role']})")
+        else:
+            logger.info(f"Default user already exists: {u['email']}")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
