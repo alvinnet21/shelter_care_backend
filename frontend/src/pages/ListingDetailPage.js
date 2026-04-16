@@ -256,27 +256,27 @@ const ListingDetailPage = () => {
                 <h2 className="text-xl font-semibold text-[#111827] mb-4">
                   Reviews ({listing.review_count || listing.reviews.length})
                 </h2>
-                <div className="space-y-4">
+                <div className="flex gap-4 overflow-x-auto pb-2">
                   {listing.reviews.map((review) => (
-                    <div key={review.id} className="bg-[#f9fafb] rounded-lg p-4" data-testid={`review-${review.id}`}>
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-full bg-[#e51636] flex items-center justify-center text-white font-medium overflow-hidden flex-shrink-0">
+                    <div key={review.id} className="bg-[#f9fafb] rounded-lg p-4 min-w-[280px] max-w-[320px] flex-shrink-0 border border-[#e5e7eb]" data-testid={`review-${review.id}`}>
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-9 h-9 rounded-full bg-[#e51636] flex items-center justify-center text-white text-sm font-medium overflow-hidden flex-shrink-0">
                           {review.seeker_photo ? (
                             <img src={review.seeker_photo} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <User className="h-5 w-5 text-white" />
+                            <User className="h-4 w-4 text-white" />
                           )}
                         </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-[#111827]">{review.seeker_name || review.user_name}</p>
+                        <div className="min-w-0">
+                          <p className="font-medium text-[#111827] text-sm truncate">{review.seeker_name || review.user_name}</p>
                           <div className="flex items-center">
                             {[...Array(review.rating)].map((_, i) => (
-                              <Star key={i} className="h-4 w-4 text-yellow-500 fill-current" />
+                              <Star key={i} className="h-3 w-3 text-yellow-500 fill-current" />
                             ))}
                           </div>
                         </div>
                       </div>
-                      <p className="text-[#4b5563]">{review.comment}</p>
+                      <p className="text-[#4b5563] text-sm line-clamp-3">{review.comment}</p>
                     </div>
                   ))}
                 </div>

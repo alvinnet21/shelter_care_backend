@@ -21,11 +21,11 @@ class BookingRepository:
         return booking
 
     async def get_bookings_by_user(self, user_id: str) -> List[dict]:
-        """Get bookings by seeker"""
+        """Get bookings by seeker (newest first)"""
         bookings = await self.collection.find(
             {"seeker_id": user_id},
             {"_id": 0}
-        ).to_list(1000)
+        ).sort("created_at", -1).to_list(1000)
         return bookings
 
     async def get_bookings_by_provider(self, provider_id: str) -> List[dict]:
