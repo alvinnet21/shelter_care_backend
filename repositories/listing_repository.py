@@ -20,8 +20,10 @@ class ListingRepository:
         return listing
 
     async def get_all_listings(self, available_only: bool = False) -> List[dict]:
-        """Get all listings"""
-        query = {"is_available": True} if available_only else {}
+        """Get all listings (excluding soft-deleted)"""
+        query = {"deleted_at": None}
+        if available_only:
+            query["is_available"] = True
         listings = await self.collection.find(query, {"_id": 0}).to_list(1000)
         return listings
 
@@ -48,9 +50,14 @@ class ListingRepository:
         return result.modified_count > 0
 
     async def get_listings_by_provider(self, provider_id: str) -> List[dict]:
-        """Get all listings by provider"""
+        """Get all listings by provider (excluding soft-deleted)"""
         listings = await self.collection.find(
-            {"provider_id": provider_id},
+            {"provider_id": provider_id, "deleted_at": None},
             {"_id": 0}
         ).to_list(1000)
+        return listings
+
+    async def get_all_listings_admin(self) -> List[dict]:
+        """Get ALL listings for admin (including soft-deleted)"""
+        listings = await self.collection.find({}, {"_id": 0}).to_list(10000)
         return listings

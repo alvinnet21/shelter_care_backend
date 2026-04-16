@@ -22,9 +22,12 @@ class Listing(BaseModel):
     title: str
     description: str
     address: str
+    suburb: str = ""
+    postcode: str = ""
     photos: List[str] = Field(default_factory=list)
     reviews: List[Review] = Field(default_factory=list)
     is_available: bool = True
+    deleted_at: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def update_availability(self, available: bool):

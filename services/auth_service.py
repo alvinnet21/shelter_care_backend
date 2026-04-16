@@ -2,8 +2,11 @@ from typing import Optional
 from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from jose import JWTError, jwt
+import string
+import random
 from models.user import User, ShelterSeeker, Provider, Verificator, Admin
 from repositories.user_repository import UserRepository
+from services.email_service import EmailService
 
 
 SECRET_KEY = "sheltercare_secret_key_2024_change_in_production"
@@ -18,6 +21,7 @@ class AuthService:
 
     def __init__(self, user_repository: UserRepository):
         self.user_repository = user_repository
+        self.email_service = EmailService()
 
     def hash_password(self, password: str) -> str:
         """Hash password"""
@@ -43,7 +47,12 @@ class AuthService:
         except JWTError:
             return None
 
-    async def register(self, email: str, full_name: str, password: str, role: str, question_answer: Optional[str] = None, id_document: Optional[str] = None) -> Optional[User]:
+    def generate_random_password(self, length: int = 10) -> str:
+        """Generate a random password"""
+        chars = string.ascii_letters + string.digits
+        return ''.join(random.choice(chars) for _ in range(length))
+
+    async def register(self, email: str, full_name: str, password: str, role: str, question_answer: Optional[str] = None, id_document: Optional[str] = None, police_check: Optional[str] = None) -> Optional[User]:
         """Register a new user"""
         existing_user = await self.user_repository.find_by_email(email)
         if existing_user:
@@ -64,6 +73,7 @@ class AuthService:
                 full_name=full_name,
                 password=hashed_password,
                 id_document=id_document,
+                police_check=police_check,
                 is_verified=False,
                 verification_status="PENDING"
             )
@@ -85,13 +95,26 @@ class AuthService:
         return await self.user_repository.create_user(user)
 
     async def login(self, email: str, password: str) -> Optional[dict]:
-        """Login user"""
+        """Login user - checks verification status for providers"""
         user = await self.user_repository.find_by_email(email)
         if not user:
             return None
 
+        # Check if user is soft-deleted
+        if user.get("deleted_at"):
+            return {"error": "deleted", "message": "This account has been deactivated. Please contact support."}
+
         if not self.verify_password(password, user["password"]):
             return None
+
+        # Check if provider is verified
+        if user["role"] == "PROVIDER" and not user.get("is_verified", False):
+            verification_status = user.get("verification_status", "PENDING")
+            if verification_status == "PENDING":
+                return {"error": "not_verified", "message": "Your account is pending verification. Please wait for a verificator to approve your account."}
+            elif verification_status == "REJECTED":
+                reason = user.get("verification_reason", "No reason provided")
+                return {"error": "rejected", "message": f"Your account verification was rejected. Reason: {reason}"}
 
         token = self.create_access_token({
             "user_id": user["id"],
@@ -108,3 +131,26 @@ class AuthService:
                 "role": user["role"]
             }
         }
+
+    async def forgot_password(self, email: str) -> dict:
+        """Reset password and send email with new random password"""
+        user = await self.user_repository.find_by_email(email)
+        if not user:
+            # Return success even if user not found (security best practice)
+            return {"success": True, "message": "If the email exists in our system, a new password has been sent."}
+
+        new_password = self.generate_random_password()
+        hashed_password = self.hash_password(new_password)
+
+        await self.user_repository.update_user(user["id"], {"password": hashed_password})
+
+        email_sent = await self.email_service.send_password_reset_email(
+            to_email=user["email"],
+            full_name=user["full_name"],
+            new_password=new_password
+        )
+
+        if email_sent:
+            return {"success": True, "message": "A new password has been sent to your email address."}
+        else:
+            return {"success": False, "message": "Failed to send email. Please try again later."}

@@ -9,6 +9,7 @@ class BookingStatus(str, Enum):
     PENDING = "PENDING"
     ACCEPTED = "ACCEPTED"
     REJECTED = "REJECTED"
+    CANCELLED = "CANCELLED"
 
 
 class Booking(BaseModel):
@@ -35,5 +36,5 @@ class Booking(BaseModel):
         self.rejection_reason = reason
     
     def cancel(self):
-        self.status = BookingStatus.REJECTED
-        self.rejection_reason = "Cancelled by user"
+        self.status = BookingStatus.CANCELLED
+        self.rejection_reason = "Cancelled by seeker"

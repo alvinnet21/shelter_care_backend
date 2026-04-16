@@ -12,7 +12,8 @@ class ListingService:
         self.user_repository = user_repository
 
     async def create_listing(
-        self, provider_id: str, title: str, description: str, address: str, photos: List[str]
+        self, provider_id: str, title: str, description: str, address: str, photos: List[str],
+        suburb: str = "", postcode: str = ""
     ) -> Optional[Listing]:
         """Create a new listing"""
         provider = await self.user_repository.find_by_id(provider_id)
@@ -25,6 +26,8 @@ class ListingService:
             title=title,
             description=description,
             address=address,
+            suburb=suburb,
+            postcode=postcode,
             photos=photos
         )
 
@@ -33,7 +36,7 @@ class ListingService:
         return created_listing
 
     async def get_all_listings(self, available_only: bool = False) -> List[dict]:
-        """Get all listings"""
+        """Get all listings (excluding soft-deleted)"""
         return await self.listing_repository.get_all_listings(available_only)
 
     async def get_listing_detail(self, listing_id: str) -> Optional[dict]:
@@ -64,5 +67,5 @@ class ListingService:
         )
 
     async def get_provider_listings(self, provider_id: str) -> List[dict]:
-        """Get all listings for a provider"""
+        """Get all listings for a provider (excluding soft-deleted)"""
         return await self.listing_repository.get_listings_by_provider(provider_id)
