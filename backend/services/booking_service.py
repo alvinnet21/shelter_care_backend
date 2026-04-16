@@ -5,6 +5,7 @@ from repositories.booking_repository import BookingRepository
 from repositories.listing_repository import ListingRepository
 from repositories.user_repository import UserRepository
 from services.notification_service import NotificationService
+from services.email_service import EmailService
 from models.notification import NotificationType
 
 
@@ -22,6 +23,7 @@ class BookingService:
         self.listing_repository = listing_repository
         self.user_repository = user_repository
         self.notification_service = notification_service
+        self.email_service = EmailService()
 
     async def create_booking(
         self, seeker_id: str, listing_id: str, check_in_date: datetime, check_out_date: datetime
@@ -55,6 +57,19 @@ class BookingService:
             notification_type=NotificationType.BOOKING_CREATED
         )
 
+        # Send email to provider
+        provider = await self.user_repository.find_by_id(listing["provider_id"])
+        if provider and provider.get("email"):
+            fmt = "%B %d, %Y"
+            await self.email_service.send_new_booking_request_email(
+                to_email=provider["email"],
+                provider_name=provider["full_name"],
+                seeker_name=seeker["full_name"],
+                listing_title=listing["title"],
+                check_in=check_in_date.strftime(fmt),
+                check_out=check_out_date.strftime(fmt),
+            )
+
         return created_booking
 
     async def accept_booking(self, booking_id: str, provider_id: str) -> bool:
@@ -74,6 +89,22 @@ class BookingService:
                 notification_type=NotificationType.BOOKING_ACCEPTED
             )
 
+            # Send email to seeker
+            seeker = await self.user_repository.find_by_id(booking["seeker_id"])
+            provider = await self.user_repository.find_by_id(provider_id)
+            if seeker and seeker.get("email"):
+                fmt = "%B %d, %Y"
+                ci = datetime.fromisoformat(booking["check_in_date"]) if isinstance(booking["check_in_date"], str) else booking["check_in_date"]
+                co = datetime.fromisoformat(booking["check_out_date"]) if isinstance(booking["check_out_date"], str) else booking["check_out_date"]
+                await self.email_service.send_booking_accepted_email(
+                    to_email=seeker["email"],
+                    seeker_name=seeker["full_name"],
+                    listing_title=booking["listing_title"],
+                    provider_name=provider["full_name"] if provider else "Provider",
+                    check_in=ci.strftime(fmt),
+                    check_out=co.strftime(fmt),
+                )
+
         return success
 
     async def reject_booking(self, booking_id: str, provider_id: str, reason: str) -> bool:
@@ -92,6 +123,23 @@ class BookingService:
                 message=f"Your booking for {booking['listing_title']} was declined. Reason: {reason}",
                 notification_type=NotificationType.BOOKING_REJECTED
             )
+
+            # Send email to seeker with rejection reason
+            seeker = await self.user_repository.find_by_id(booking["seeker_id"])
+            provider = await self.user_repository.find_by_id(provider_id)
+            if seeker and seeker.get("email"):
+                fmt = "%B %d, %Y"
+                ci = datetime.fromisoformat(booking["check_in_date"]) if isinstance(booking["check_in_date"], str) else booking["check_in_date"]
+                co = datetime.fromisoformat(booking["check_out_date"]) if isinstance(booking["check_out_date"], str) else booking["check_out_date"]
+                await self.email_service.send_booking_rejected_email(
+                    to_email=seeker["email"],
+                    seeker_name=seeker["full_name"],
+                    listing_title=booking["listing_title"],
+                    provider_name=provider["full_name"] if provider else "Provider",
+                    check_in=ci.strftime(fmt),
+                    check_out=co.strftime(fmt),
+                    reason=reason,
+                )
 
         return success
 
