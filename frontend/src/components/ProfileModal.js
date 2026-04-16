@@ -101,6 +101,39 @@ const ProfileModal = () => {
                 </div>
               )}
 
+              {/* Seeker: provider reviews */}
+              {profile.role === 'SEEKER' && (
+                <div data-testid="profile-modal-provider-reviews">
+                  <p className="text-xs text-[#9ca3af] uppercase mb-2">Reviews from Providers</p>
+                  {profile.provider_reviews && profile.provider_reviews.length > 0 ? (
+                    <div className="flex gap-3 overflow-x-auto pb-2">
+                      {profile.provider_reviews.map((review) => (
+                        <div key={review.id} className="bg-[#f9fafb] rounded-lg p-3 min-w-[240px] max-w-[280px] flex-shrink-0 border border-[#e5e7eb]" data-testid={`profile-modal-provider-review-${review.id}`}>
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs overflow-hidden flex-shrink-0">
+                              {review.provider_photo ? (
+                                <img src={review.provider_photo} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                review.provider_name?.charAt(0).toUpperCase()
+                              )}
+                            </div>
+                            <p className="font-medium text-[#111827] text-sm truncate">{review.provider_name}</p>
+                            <div className="flex items-center ml-auto flex-shrink-0">
+                              {[...Array(review.rating)].map((_, i) => (
+                                <Star key={i} className="h-3 w-3 text-yellow-500 fill-current" />
+                              ))}
+                            </div>
+                          </div>
+                          <p className="text-sm text-[#4b5563] line-clamp-2">{review.comment}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[#4b5563] text-sm">-</p>
+                  )}
+                </div>
+              )}
+
               {/* Provider: listings */}
               {profile.role === 'PROVIDER' && (
                 <div data-testid="profile-modal-listings">

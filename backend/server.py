@@ -19,7 +19,7 @@ from services.listing_service import ListingService
 from services.booking_service import BookingService
 from services.notification_service import NotificationService
 from models.booking import BookingStatus
-from models.review import BookingReview
+from models.review import BookingReview, ProviderReview
 from models.notification import NotificationType
 
 ROOT_DIR = Path(__file__).parent
@@ -211,6 +211,15 @@ async def get_public_profile(user_id: str):
 
     if user["role"] == "SEEKER":
         profile["phone_number"] = user.get("phone_number")
+        # Fetch provider reviews about this seeker
+        provider_reviews = await db.provider_reviews.find(
+            {"seeker_id": user_id}, {"_id": 0}
+        ).sort("created_at", -1).to_list(100)
+        for r in provider_reviews:
+            provider = await user_repo.find_by_id(r.get("provider_id", ""))
+            r["provider_photo"] = provider.get("profile_photo") if provider else None
+            r["provider_name"] = r.get("provider_name") or (provider.get("full_name") if provider else "Unknown")
+        profile["provider_reviews"] = provider_reviews[:5]
     elif user["role"] == "PROVIDER":
         # Show listings (not deleted)
         listings = await listing_repo.get_listings_by_provider(user_id)
@@ -540,6 +549,45 @@ async def get_booking_review(booking_id: str, current_user: dict = Depends(get_c
     if booking["seeker_id"] != current_user["id"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     review = await review_repo.get_review_by_booking(booking_id)
+    if not review:
+        return {"has_review": False, "review": None}
+    return {"has_review": True, "review": review}
+
+@api_router.post("/bookings/{booking_id}/provider-review")
+async def create_or_update_provider_review(booking_id: str, req: ReviewRequest, current_user: dict = Depends(get_current_user)):
+    """Provider reviews a seeker for a booking"""
+    if current_user["role"] != "PROVIDER":
+        raise HTTPException(status_code=403, detail="Only providers can review seekers")
+    booking = await booking_repo.get_booking_by_id(booking_id)
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    if booking["provider_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="You can only review bookings for your listings")
+    if booking["status"] != "ACCEPTED":
+        raise HTTPException(status_code=400, detail="You can only review accepted bookings")
+    existing = await db.provider_reviews.find_one({"booking_id": booking_id}, {"_id": 0})
+    if existing:
+        await db.provider_reviews.update_one({"booking_id": booking_id}, {"$set": {"rating": req.rating, "comment": req.comment, "updated_at": datetime.now(timezone.utc).isoformat()}})
+        await booking_repo.collection.update_one({"id": booking_id}, {"$set": {"has_provider_review": True}})
+        return {"message": "Review updated successfully", "is_new": False}
+    else:
+        review = ProviderReview(booking_id=booking_id, listing_id=booking["listing_id"], seeker_id=booking["seeker_id"], provider_id=current_user["id"], provider_name=current_user["full_name"], rating=req.rating, comment=req.comment)
+        review_dict = review.model_dump()
+        review_dict["created_at"] = review_dict["created_at"].isoformat()
+        review_dict["updated_at"] = review_dict["updated_at"].isoformat()
+        await db.provider_reviews.insert_one(review_dict)
+        await booking_repo.collection.update_one({"id": booking_id}, {"$set": {"has_provider_review": True}})
+        return {"message": "Review created successfully", "is_new": True}
+
+@api_router.get("/bookings/{booking_id}/provider-review")
+async def get_provider_review(booking_id: str, current_user: dict = Depends(get_current_user)):
+    """Get provider's review for a booking"""
+    booking = await booking_repo.get_booking_by_id(booking_id)
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    if booking["provider_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    review = await db.provider_reviews.find_one({"booking_id": booking_id}, {"_id": 0})
     if not review:
         return {"has_review": False, "review": None}
     return {"has_review": True, "review": review}

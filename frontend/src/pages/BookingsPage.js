@@ -20,8 +20,11 @@ const BookingsPage = () => {
   const [reviewingBookingId, setReviewingBookingId] = useState(null);
   const [reviewData, setReviewData] = useState({ rating: 5, comment: '' });
   const [existingReviews, setExistingReviews] = useState({});
+  const [existingProviderReviews, setExistingProviderReviews] = useState({});
   const [cancellingId, setCancellingId] = useState(null);
   const [providerTab, setProviderTab] = useState(searchParams.get('tab') || 'requests');
+  const [providerReviewingId, setProviderReviewingId] = useState(null);
+  const [providerReviewData, setProviderReviewData] = useState({ rating: 5, comment: '' });
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
@@ -45,6 +48,16 @@ const BookingsPage = () => {
           try {
             const reviewRes = await axios.get(`${API}/bookings/${booking.id}/review`, { headers: { Authorization: `Bearer ${token}` } });
             if (reviewRes.data.has_review) setExistingReviews(prev => ({ ...prev, [booking.id]: reviewRes.data.review }));
+          } catch (err) { /* skip */ }
+        }
+      }
+
+      if (user.role === 'PROVIDER') {
+        const acceptedBookings = response.data.bookings.filter(b => b.status === 'ACCEPTED');
+        for (const booking of acceptedBookings) {
+          try {
+            const reviewRes = await axios.get(`${API}/bookings/${booking.id}/provider-review`, { headers: { Authorization: `Bearer ${token}` } });
+            if (reviewRes.data.has_review) setExistingProviderReviews(prev => ({ ...prev, [booking.id]: reviewRes.data.review }));
           } catch (err) { /* skip */ }
         }
       }
@@ -86,6 +99,16 @@ const BookingsPage = () => {
       const res = await axios.post(`${API}/bookings/${bookingId}/review`, reviewData, { headers: { Authorization: `Bearer ${token}` } });
       toast.success(res.data.is_new ? 'Review submitted!' : 'Review updated!');
       setReviewingBookingId(null); setReviewData({ rating: 5, comment: '' });
+      fetchBookings();
+    } catch (error) { toast.error(error.response?.data?.detail || 'Failed to submit review'); }
+  };
+
+  const handleSubmitProviderReview = async (bookingId) => {
+    if (!providerReviewData.comment.trim()) { toast.error('Please write a review'); return; }
+    try {
+      const res = await axios.post(`${API}/bookings/${bookingId}/provider-review`, providerReviewData, { headers: { Authorization: `Bearer ${token}` } });
+      toast.success(res.data.is_new ? 'Review submitted!' : 'Review updated!');
+      setProviderReviewingId(null); setProviderReviewData({ rating: 5, comment: '' });
       fetchBookings();
     } catch (error) { toast.error(error.response?.data?.detail || 'Failed to submit review'); }
   };
@@ -214,6 +237,36 @@ const BookingsPage = () => {
                         <button onClick={() => { const r = existingReviews[booking.id]; if(r) setReviewData({rating:r.rating,comment:r.comment}); setReviewingBookingId(booking.id); }}
                           className="bg-[#e51636] text-white hover:bg-[#c4122f] px-6 py-2 rounded-lg flex items-center justify-center space-x-2" data-testid={`add-review-${booking.id}`}>
                           <Star className="h-5 w-5" /><span>{existingReviews[booking.id] ? 'Edit Review' : 'Add Review'}</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Provider: Review Seeker on accepted bookings */}
+                  {user.role === 'PROVIDER' && booking.status === 'ACCEPTED' && (
+                    <div className="flex flex-col gap-2">
+                      {providerReviewingId === booking.id ? (
+                        <div className="space-y-3 bg-[#f9fafb] p-4 rounded-lg">
+                          <div>
+                            <label className="block text-sm font-medium text-[#111827] mb-2">Rate Seeker</label>
+                            <div className="flex gap-1">
+                              {[1,2,3,4,5].map(s => (
+                                <button key={s} type="button" onClick={() => setProviderReviewData({...providerReviewData, rating: s})} className="focus:outline-none" data-testid={`provider-rating-star-${s}`}>
+                                  <Star className={`h-6 w-6 ${s <= providerReviewData.rating ? 'text-yellow-500 fill-current' : 'text-[#e5e7eb]'}`} />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <textarea value={providerReviewData.comment} onChange={(e) => setProviderReviewData({...providerReviewData, comment: e.target.value})} placeholder="How was this seeker?..." className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg min-h-[80px]" data-testid={`provider-review-comment-${booking.id}`} />
+                          <div className="flex gap-2">
+                            <button onClick={() => handleSubmitProviderReview(booking.id)} className="flex-1 bg-[#e51636] text-white hover:bg-[#c4122f] px-4 py-2 rounded-lg text-sm" data-testid={`submit-provider-review-${booking.id}`}>{existingProviderReviews[booking.id] ? 'Update' : 'Submit'}</button>
+                            <button onClick={() => { setProviderReviewingId(null); setProviderReviewData({rating:5,comment:''}); }} className="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg text-sm">Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button onClick={() => { const r = existingProviderReviews[booking.id]; if(r) setProviderReviewData({rating:r.rating,comment:r.comment}); setProviderReviewingId(booking.id); }}
+                          className="bg-blue-600 text-white hover:bg-blue-700 px-6 py-2 rounded-lg flex items-center justify-center space-x-2" data-testid={`review-seeker-${booking.id}`}>
+                          <Star className="h-5 w-5" /><span>{existingProviderReviews[booking.id] ? 'Edit Seeker Review' : 'Review Seeker'}</span>
                         </button>
                       )}
                     </div>
