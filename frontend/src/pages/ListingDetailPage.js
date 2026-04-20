@@ -22,6 +22,7 @@ const ListingDetailPage = () => {
   const [checkInDate, setCheckInDate] = useState(null);
   const [checkOutDate, setCheckOutDate] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [bookingNotes, setBookingNotes] = useState('');
   const [blockedDates, setBlockedDates] = useState([]);
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkOutOpen, setCheckOutOpen] = useState(false);
@@ -91,7 +92,8 @@ const ListingDetailPage = () => {
       await axios.post(`${API}/bookings`, {
         listing_id: id,
         check_in_date: checkInDate.toISOString(),
-        check_out_date: checkOutDate.toISOString()
+        check_out_date: checkOutDate.toISOString(),
+        notes: bookingNotes || null
       }, { headers: { Authorization: `Bearer ${token}` } });
       toast.success('Booking request sent successfully!');
       navigate('/bookings');
@@ -241,6 +243,16 @@ const ListingDetailPage = () => {
                       <p className="text-sm text-green-800"><span className="font-medium">Selected:</span> {format(checkInDate, 'MMM dd, yyyy')} to {format(checkOutDate, 'MMM dd, yyyy')}</p>
                     </div>
                   )}
+                  <div>
+                    <label className="block text-sm font-medium text-[#111827] mb-2">Notes (Optional)</label>
+                    <textarea
+                      value={bookingNotes}
+                      onChange={(e) => setBookingNotes(e.target.value)}
+                      placeholder="Leave a message for the provider..."
+                      className="w-full px-4 py-3 border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e51636]/30 focus:border-[#e51636] min-h-[80px] resize-none"
+                      data-testid="booking-notes-input"
+                    />
+                  </div>
                   <button type="submit" disabled={submitting || !checkInDate || !checkOutDate}
                     className="w-full bg-[#e51636] text-white hover:bg-[#c4122f] px-8 py-3 rounded-lg transition-all font-medium flex items-center justify-center space-x-2 disabled:opacity-50"
                     data-testid="submit-booking-button">

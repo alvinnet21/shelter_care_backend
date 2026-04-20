@@ -104,6 +104,10 @@ class AuthService:
         if user.get("deleted_at"):
             return {"error": "deleted", "message": "This account has been deactivated. Please contact support."}
 
+        # Check if user is suspended
+        if user.get("is_suspended"):
+            return {"error": "suspended", "message": "Your account has been suspended. Please contact support."}
+
         if not self.verify_password(password, user["password"]):
             return None
 

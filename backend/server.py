@@ -75,6 +75,7 @@ class CreateBookingRequest(BaseModel):
     listing_id: str
     check_in_date: str
     check_out_date: str
+    notes: Optional[str] = None
 
 class RejectBookingRequest(BaseModel):
     reason: str
@@ -92,6 +93,13 @@ class UpdateProfileRequest(BaseModel):
     profile_photo: Optional[str] = None
     date_of_birth: Optional[str] = None
     description: Optional[str] = None
+    phone_number: Optional[str] = None
+
+class CreateUserRequest(BaseModel):
+    email: EmailStr
+    full_name: str
+    password: str
+    role: str
     phone_number: Optional[str] = None
 
 class BlockDatesRequest(BaseModel):
@@ -298,6 +306,61 @@ async def soft_delete_listing(listing_id: str, current_user: dict = Depends(get_
     await listing_repo.update_listing(listing_id, {"deleted_at": now})
     return {"message": "Listing taken down successfully"}
 
+@api_router.post("/admin/users")
+async def admin_create_user(req: CreateUserRequest, current_user: dict = Depends(get_current_user)):
+    """Admin creates a new user (except ADMIN role)"""
+    if current_user["role"] != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    if req.role == "ADMIN":
+        raise HTTPException(status_code=400, detail="Cannot create admin users")
+    if req.role not in ("SEEKER", "PROVIDER", "VERIFICATOR"):
+        raise HTTPException(status_code=400, detail="Invalid role")
+    user = await auth_service.register(email=req.email, full_name=req.full_name, password=req.password, role=req.role)
+    if not user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    if req.phone_number:
+        await user_repo.update_user(user.id, {"phone_number": req.phone_number})
+    return {"message": "User created successfully", "user_id": user.id}
+
+@api_router.put("/admin/users/{user_id}/suspend")
+async def suspend_user(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Suspend a user (cannot login)"""
+    if current_user["role"] != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    user = await user_repo.find_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user["role"] == "ADMIN":
+        raise HTTPException(status_code=400, detail="Cannot suspend admin users")
+    await user_repo.update_user(user_id, {"is_suspended": True})
+    return {"message": "User suspended successfully"}
+
+@api_router.put("/admin/users/{user_id}/unsuspend")
+async def unsuspend_user(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Remove suspension from a user"""
+    if current_user["role"] != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    user = await user_repo.find_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    await user_repo.update_user(user_id, {"is_suspended": False})
+    return {"message": "User unsuspended successfully"}
+
+@api_router.get("/admin/bookings")
+async def get_all_bookings_admin(current_user: dict = Depends(get_current_user)):
+    """Get all bookings for admin with seeker/provider info"""
+    if current_user["role"] != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    bookings = await booking_repo.collection.find({}, {"_id": 0}).sort("created_at", -1).to_list(10000)
+    for b in bookings:
+        seeker = await user_repo.find_by_id(b.get("seeker_id", ""))
+        provider = await user_repo.find_by_id(b.get("provider_id", ""))
+        b["seeker_email"] = seeker.get("email") if seeker else None
+        b["seeker_phone"] = seeker.get("phone_number") if seeker else None
+        b["provider_name"] = provider.get("full_name") if provider else None
+        b["provider_email"] = provider.get("email") if provider else None
+    return {"bookings": bookings}
+
 
 # ==================== VERIFICATOR ====================
 
@@ -497,6 +560,9 @@ async def create_booking(req: CreateBookingRequest, current_user: dict = Depends
     booking = await booking_service.create_booking(seeker_id=current_user["id"], listing_id=req.listing_id, check_in_date=check_in, check_out_date=check_out)
     if not booking:
         raise HTTPException(status_code=400, detail="Failed to create booking")
+    # Save notes if provided
+    if req.notes:
+        await booking_repo.collection.update_one({"id": booking.id}, {"$set": {"notes": req.notes}})
     return {"message": "Booking created successfully", "booking": booking.model_dump()}
 
 @api_router.get("/bookings/me")
