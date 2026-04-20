@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { MapPin, Star, Eye, Home as HomeIcon, Search } from 'lucide-react';
+import { MapPin, Star, Eye, Home as HomeIcon, Search, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -55,19 +55,31 @@ const ListingsPage = () => {
     return (sum / reviews.length).toFixed(1);
   };
 
+  const getDashboardLink = () => {
+    if (!user) return '/';
+    if (user.role === 'ADMIN') return '/admin';
+    if (user.role === 'VERIFICATOR') return '/verificator';
+    return '/dashboard';
+  };
+
   return (
     <div className="min-h-screen-header bg-[#f9fafb]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {user && (
+          <button onClick={() => navigate(getDashboardLink())} className="flex items-center text-[#4b5563] hover:text-[#e51636] mb-4 transition-colors" data-testid="back-to-dashboard">
+            <ArrowLeft className="h-5 w-5 mr-2" />Back to Dashboard
+          </button>
+        )}
         <div className="mb-8">
           <h1
             className="text-3xl sm:text-4xl font-bold text-[#111827] mb-2"
             style={{ fontFamily: 'Outfit, sans-serif' }}
             data-testid="listings-title"
           >
-            Available Shelters
+            Find Shelters
           </h1>
           <p className="text-[#4b5563]">
-            Browse through available shelter listings and find a safe place
+            Search through shelter listings and find a safe place
           </p>
         </div>
 
