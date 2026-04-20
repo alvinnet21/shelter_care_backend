@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useProfileModal } from '../context/ProfileModalContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
-import { Calendar, User, CheckCircle, XCircle, Clock, AlertCircle, Star, Ban, ClipboardList, History, Phone, FileText, CalendarCheck } from 'lucide-react';
+import { Calendar, User, CheckCircle, XCircle, Clock, AlertCircle, Star, Ban, ClipboardList, History, Phone, FileText, CalendarCheck, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -266,6 +266,9 @@ const BookingsPage = () => {
   return (
     <div className="min-h-screen-header bg-[#f9fafb]">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <button onClick={() => navigate('/dashboard')} className="flex items-center text-[#4b5563] hover:text-[#e51636] mb-4 transition-colors" data-testid="back-to-dashboard">
+          <ArrowLeft className="h-5 w-5 mr-2" />Back to Dashboard
+        </button>
         <h1 className="text-3xl sm:text-4xl font-bold text-[#111827] mb-6" style={{ fontFamily: 'Outfit, sans-serif' }} data-testid="bookings-title">
           {user.role === 'SEEKER' ? 'My Bookings' : 'Bookings'}
         </h1>
