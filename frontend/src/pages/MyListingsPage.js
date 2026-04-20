@@ -68,25 +68,37 @@ const MyListingsPage = () => {
     setShowBlockModal(false);
     setSelectedListing(null);
     setBlockedDates([]);
-    setNewBlockDate('');
+    setNewBlockStartDate('');
+    setNewBlockEndDate('');
   };
 
   const handleBlockDate = async () => {
-    if (!newBlockDate || !selectedListing) return;
+    if (!newBlockStartDate || !selectedListing) return;
+    const end = newBlockEndDate || newBlockStartDate;
+    
+    const dates = [];
+    const current = new Date(newBlockStartDate);
+    const endDate = new Date(end);
+    while (current <= endDate) {
+      dates.push(current.toISOString().split('T')[0]);
+      current.setDate(current.getDate() + 1);
+    }
+    if (dates.length === 0) return;
     
     setLoadingBlock(true);
     try {
       await axios.post(
         `${API}/listings/${selectedListing.id}/block-dates`,
-        { dates: [newBlockDate] },
+        { dates },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setBlockedDates([...blockedDates, newBlockDate]);
-      setNewBlockDate('');
-      toast.success('Date blocked successfully');
+      setBlockedDates([...new Set([...blockedDates, ...dates])]);
+      setNewBlockStartDate('');
+      setNewBlockEndDate('');
+      toast.success(`${dates.length} date(s) blocked successfully`);
     } catch (error) {
-      console.error('Failed to block date:', error);
-      toast.error('Failed to block date');
+      console.error('Failed to block dates:', error);
+      toast.error('Failed to block dates');
     } finally {
       setLoadingBlock(false);
     }
