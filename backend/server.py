@@ -348,17 +348,22 @@ async def unsuspend_user(user_id: str, current_user: dict = Depends(get_current_
 
 @api_router.get("/admin/bookings")
 async def get_all_bookings_admin(current_user: dict = Depends(get_current_user)):
-    """Get all bookings for admin with seeker/provider info"""
+    """Get all bookings for admin with seeker/provider/listing info"""
     if current_user["role"] != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
     bookings = await booking_repo.collection.find({}, {"_id": 0}).sort("created_at", -1).to_list(10000)
     for b in bookings:
         seeker = await user_repo.find_by_id(b.get("seeker_id", ""))
         provider = await user_repo.find_by_id(b.get("provider_id", ""))
+        listing = await listing_repo.get_listing_by_id(b.get("listing_id", ""))
         b["seeker_email"] = seeker.get("email") if seeker else None
         b["seeker_phone"] = seeker.get("phone_number") if seeker else None
         b["provider_name"] = provider.get("full_name") if provider else None
         b["provider_email"] = provider.get("email") if provider else None
+        b["listing_photo"] = listing.get("photos", [None])[0] if listing and listing.get("photos") else None
+        b["listing_address"] = listing.get("address", "") if listing else ""
+        b["listing_suburb"] = listing.get("suburb", "") if listing else ""
+        b["listing_postcode"] = listing.get("postcode", "") if listing else ""
     return {"bookings": bookings}
 
 

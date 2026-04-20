@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useProfileModal } from '../context/ProfileModalContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Users, Calendar, Home, ListOrdered, Trash2, Eye, Search, CheckCircle, XCircle, FileText, ShieldCheck, X, UserPlus, Ban, Unlock, ClipboardList, Clock, History, Phone, Mail, Lock, CalendarCheck } from 'lucide-react';
+import { Users, Calendar, Home, ListOrdered, Trash2, Eye, Search, CheckCircle, XCircle, FileText, ShieldCheck, X, UserPlus, Ban, Unlock, ClipboardList, Clock, History, Phone, Mail, Lock, CalendarCheck, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -23,7 +23,7 @@ const AdminDashboard = () => {
   const [userSearch, setUserSearch] = useState('');
   const [listingSearch, setListingSearch] = useState('');
   const [bookingSearch, setBookingSearch] = useState('');
-  const [bookingFilter, setBookingFilter] = useState('all');
+  const [bookingFilter, setBookingFilter] = useState('upcoming');
 
   // Provider verification
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -162,9 +162,9 @@ const AdminDashboard = () => {
     if (bookingFilter === 'pending') filtered = filtered.filter(b => b.status === 'PENDING');
     return filtered;
   };
-  const filteredBookings = getFilteredBookings();
 
   const formatDate = (d) => { try { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); } catch { return d; } };
+  const filteredBookings = getFilteredBookings();
 
   if (!user) return null;
 
@@ -328,7 +328,6 @@ const AdminDashboard = () => {
                 </div>
                 <div className="flex gap-2 mb-4 flex-wrap">
                   {[
-                    { key: 'all', label: 'All', icon: ClipboardList },
                     { key: 'upcoming', label: 'Upcoming', icon: CalendarCheck },
                     { key: 'history', label: 'History', icon: History },
                     { key: 'pending', label: 'Pending', icon: Clock },
@@ -343,37 +342,56 @@ const AdminDashboard = () => {
                 {loading ? <p className="text-center py-8 text-[#4b5563]">Loading...</p> : (
                   <div className="space-y-3">
                     {filteredBookings.map(b => (
-                      <div key={b.id} className="border border-[#e5e7eb] rounded-lg p-4" data-testid={`admin-booking-${b.id}`}>
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold text-[#111827]">{b.listing_title}</h4>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${b.status === 'ACCEPTED' ? 'bg-green-100 text-green-800' : b.status === 'REJECTED' ? 'bg-red-100 text-red-800' : b.status === 'CANCELLED' ? 'bg-gray-100 text-gray-800' : 'bg-yellow-100 text-yellow-800'}`}>{b.status}</span>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-[#4b5563]">
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4 text-[#9ca3af]" />
-                            <span><span className="font-medium">Seeker:</span> {b.seeker_name} {b.seeker_email ? `(${b.seeker_email})` : ''}</span>
+                      <div key={b.id} className="border border-[#e5e7eb] rounded-lg overflow-hidden" data-testid={`admin-booking-${b.id}`}>
+                        <div className="flex">
+                          {/* Listing cover image */}
+                          <div className="w-28 h-28 bg-[#f3f4f6] flex-shrink-0">
+                            {b.listing_photo ? (
+                              <img src={b.listing_photo} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center"><Home className="h-8 w-8 text-[#9ca3af]" /></div>
+                            )}
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Home className="h-4 w-4 text-[#9ca3af]" />
-                            <span><span className="font-medium">Provider:</span> {b.provider_name || '-'} {b.provider_email ? `(${b.provider_email})` : ''}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-[#9ca3af]" />
-                            <span>{formatDate(b.check_in_date)} - {formatDate(b.check_out_date)}</span>
-                          </div>
-                          {b.seeker_phone && (
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-4 w-4 text-[#9ca3af]" />
-                              <span>{b.seeker_phone}</span>
+                          <div className="flex-1 p-4">
+                            <div className="flex items-center justify-between mb-1">
+                              <h4 className="font-semibold text-[#111827]">{b.listing_title}</h4>
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${b.status === 'ACCEPTED' ? 'bg-green-100 text-green-800' : b.status === 'REJECTED' ? 'bg-red-100 text-red-800' : b.status === 'CANCELLED' ? 'bg-gray-100 text-gray-800' : 'bg-yellow-100 text-yellow-800'}`}>{b.status}</span>
                             </div>
-                          )}
+                            {/* Listing location */}
+                            <div className="flex items-center text-xs text-[#9ca3af] mb-2">
+                              <MapPin className="h-3 w-3 mr-1" />
+                              <span>{b.listing_address}{b.listing_suburb ? `, ${b.listing_suburb}` : ''}{b.listing_postcode ? ` ${b.listing_postcode}` : ''}</span>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 text-sm text-[#4b5563]">
+                              <div className="flex items-center gap-2">
+                                <Users className="h-4 w-4 text-[#9ca3af] flex-shrink-0" />
+                                <span className="font-medium mr-1">Seeker:</span>
+                                <button onClick={() => openProfile(b.seeker_id)} className="text-[#e51636] hover:underline truncate">{b.seeker_name}</button>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Home className="h-4 w-4 text-[#9ca3af] flex-shrink-0" />
+                                <span className="font-medium mr-1">Provider:</span>
+                                <button onClick={() => openProfile(b.provider_id)} className="text-[#e51636] hover:underline truncate">{b.provider_name || '-'}</button>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-[#9ca3af] flex-shrink-0" />
+                                <span>{formatDate(b.check_in_date)} - {formatDate(b.check_out_date)}</span>
+                              </div>
+                              {b.seeker_phone && (
+                                <div className="flex items-center gap-2">
+                                  <Phone className="h-4 w-4 text-[#9ca3af] flex-shrink-0" />
+                                  <span>{b.seeker_phone}</span>
+                                </div>
+                              )}
+                            </div>
+                            {b.notes && (
+                              <div className="mt-2 bg-blue-50 p-2 rounded-lg text-xs text-blue-700"><span className="font-medium">Notes:</span> {b.notes}</div>
+                            )}
+                            {b.rejection_reason && (
+                              <div className="mt-2 bg-red-50 p-2 rounded-lg text-xs text-red-700"><span className="font-medium">Reason:</span> {b.rejection_reason}</div>
+                            )}
+                          </div>
                         </div>
-                        {b.notes && (
-                          <div className="mt-2 bg-blue-50 p-2 rounded-lg text-sm text-blue-700"><span className="font-medium">Notes:</span> {b.notes}</div>
-                        )}
-                        {b.rejection_reason && (
-                          <div className="mt-2 bg-red-50 p-2 rounded-lg text-sm text-red-700"><span className="font-medium">Reason:</span> {b.rejection_reason}</div>
-                        )}
                       </div>
                     ))}
                     {filteredBookings.length === 0 && <p className="text-center py-8 text-[#4b5563]">No bookings found</p>}
