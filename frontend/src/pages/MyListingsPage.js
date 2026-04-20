@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Home, Edit, Eye, MapPin, Star, CalendarOff, X, Calendar, Plus } from 'lucide-react';
+import { Home, Edit, Eye, MapPin, Star, CalendarOff, X, Calendar, Plus, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -112,6 +112,9 @@ const MyListingsPage = () => {
   return (
     <div className="min-h-screen-header bg-[#f9fafb]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <button onClick={() => navigate('/dashboard')} className="flex items-center text-[#4b5563] hover:text-[#e51636] mb-4 transition-colors" data-testid="back-to-dashboard">
+          <ArrowLeft className="h-5 w-5 mr-2" />Back to Dashboard
+        </button>
         <div className="mb-8">
           <h1
             className="text-3xl sm:text-4xl font-bold text-[#111827] mb-2"
