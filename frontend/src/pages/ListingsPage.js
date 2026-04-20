@@ -149,8 +149,8 @@ const ListingsPage = () => {
                     {listing.title}
                   </h3>
                   <div className="flex items-center text-sm text-[#4b5563] mb-3">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    <span>{listing.address}</span>
+                    <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
+                    <span>{listing.address}{listing.suburb ? `, ${listing.suburb}` : ''}{listing.postcode ? ` ${listing.postcode}` : ''}</span>
                   </div>
                   <p className="text-[#4b5563] mb-4 line-clamp-2">
                     {listing.description}
