@@ -456,6 +456,10 @@ async def get_my_listings(current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "PROVIDER":
         raise HTTPException(status_code=403, detail="Only providers can access this")
     listings = await listing_service.get_provider_listings(current_user["id"])
+    # Attach real reviews from reviews collection
+    for listing in listings:
+        reviews = await review_repo.collection.find({"listing_id": listing["id"]}, {"_id": 0}).to_list(1000)
+        listing["reviews"] = reviews
     return {"listings": listings}
 
 @api_router.get("/listings/{listing_id}")
