@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { UserPlus, Mail, Lock, User, FileText, AlertCircle, Upload, ShieldCheck } from 'lucide-react';
+import { UserPlus, Mail, Lock, User, FileText, AlertCircle, Upload, ShieldCheck, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 
 const RegisterPage = () => {
@@ -13,7 +13,8 @@ const RegisterPage = () => {
     role: 'SEEKER',
     question_answer: '',
     id_document: '',
-    police_check: ''
+    police_check: '',
+    phone_number: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -44,6 +45,11 @@ const RegisterPage = () => {
       return;
     }
 
+    if (!formData.phone_number || formData.phone_number.replace('+61', '').length === 0) {
+      setError('Phone number is required');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -54,7 +60,8 @@ const RegisterPage = () => {
         formData.role,
         formData.role === 'SEEKER' ? formData.question_answer : null,
         formData.role === 'PROVIDER' ? formData.id_document : null,
-        formData.role === 'PROVIDER' ? formData.police_check : null
+        formData.role === 'PROVIDER' ? formData.police_check : null,
+        formData.phone_number
       );
       
       if (formData.role === 'PROVIDER') {
@@ -276,6 +283,30 @@ const RegisterPage = () => {
                   placeholder="••••••••"
                   required
                   data-testid="register-confirm-password-input"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#111827] mb-2">
+                Phone Number *
+              </label>
+              <div className="relative flex items-center">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9ca3af]" />
+                <span className="absolute left-10 top-1/2 -translate-y-1/2 text-[#4b5563] font-medium">+61</span>
+                <input
+                  type="text"
+                  value={formData.phone_number.replace('+61', '')}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^\d]/g, '');
+                    setFormData({ ...formData, phone_number: val ? `+61${val}` : '' });
+                  }}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  className="w-full pl-20 pr-4 py-3 border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e51636]/30 focus:border-[#e51636]"
+                  placeholder="412345678"
+                  required
+                  data-testid="register-phone-input"
                 />
               </div>
             </div>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShelterLink - ER Diagram</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 32px 16px;
+        }
+        h1 {
+            font-size: 28px;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 32px;
+            font-size: 15px;
+        }
+        .diagram-container {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+            max-width: 1200px;
+            width: 100%;
+            overflow-x: auto;
+        }
+        .legend {
+            margin-top: 32px;
+            max-width: 1200px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+        .legend-card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .legend-card h3 {
+            font-size: 14px;
+            color: #e51636;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .legend-card p {
+            font-size: 13px;
+            color: #4b5563;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <h1>ShelterLink - Entity Relationship Diagram</h1>
+    <p class="subtitle">MongoDB Collections &amp; Relationships</p>
+
+    <div class="diagram-container">
+        <div class="mermaid">
+erDiagram
+    USER {
+        string id PK "UUID"
+        string email UK "EmailStr"
+        string full_name
+        string password "hashed"
+        string role "SEEKER | PROVIDER | VERIFICATOR | ADMIN"
+        string profile_photo "nullable"
+        datetime created_at
+    }
+
+    SHELTER_SEEKER {
+        string id PK "extends USER"
+        string question_answer "nullable"
+        list booking_history "array of Booking IDs"
+    }
+
+    PROVIDER {
+        string id PK "extends USER"
+        list listings "array of Listing IDs"
+        list incoming_bookings "array of Booking IDs"
+        string id_document "base64 image"
+        string police_check "base64 image"
+        boolean is_verified "default false"
+        string verification_status "PENDING | APPROVED | REJECTED"
+        string verification_reason "nullable"
+        datetime verified_at "nullable"
+        string verified_by "Verificator user ID"
+    }
+
+    VERIFICATOR {
+        string id PK "extends USER"
+        list verified_providers "array of Provider IDs"
+    }
+
+    ADMIN {
+        string id PK "extends USER"
+    }
+
+    LISTING {
+        string id PK "UUID"
+        string provider_id FK "ref Provider"
+        string provider_name
+        string title
+        string description
+        string address
+        list photos "array of base64 or URLs"
+        list reviews "embedded Review subdocs"
+        boolean is_available "default true"
+        list manual_blocked_dates "array of date strings"
+        datetime created_at
+    }
+
+    BOOKING {
+        string id PK "UUID"
+        string seeker_id FK "ref ShelterSeeker"
+        string seeker_name
+        string provider_id FK "ref Provider"
+        string listing_id FK "ref Listing"
+        string listing_title
+        datetime booking_date
+        datetime check_in_date
+        datetime check_out_date
+        string status "PENDING | ACCEPTED | REJECTED | CANCELLED"
+        string rejection_reason "nullable"
+        boolean has_review "default false"
+        datetime created_at
+    }
+
+    BOOKING_REVIEW {
+        string id PK "UUID"
+        string booking_id FK "ref Booking"
+        string listing_id FK "ref Listing"
+        string seeker_id FK "ref ShelterSeeker"
+        string seeker_name
+        int rating "1-5"
+        string comment
+        datetime created_at
+        datetime updated_at
+    }
+
+    NOTIFICATION {
+        string id PK "UUID"
+        string user_id FK "ref User"
+        string message
+        string type "BOOKING_CREATED | ACCEPTED | REJECTED | CANCELLED | GENERAL"
+        boolean is_read "default false"
+        datetime created_at
+    }
+
+    USER ||--o| SHELTER_SEEKER : "role = SEEKER"
+    USER ||--o| PROVIDER : "role = PROVIDER"
+    USER ||--o| VERIFICATOR : "role = VERIFICATOR"
+    USER ||--o| ADMIN : "role = ADMIN"
+
+    PROVIDER ||--o{ LISTING : "creates"
+    SHELTER_SEEKER ||--o{ BOOKING : "makes"
+    PROVIDER ||--o{ BOOKING : "receives"
+    LISTING ||--o{ BOOKING : "has"
+    BOOKING ||--o| BOOKING_REVIEW : "has"
+    LISTING ||--o{ BOOKING_REVIEW : "has"
+    SHELTER_SEEKER ||--o{ BOOKING_REVIEW : "writes"
+    USER ||--o{ NOTIFICATION : "receives"
+    VERIFICATOR ||--o{ PROVIDER : "verifies"
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-card">
+            <h3>Users Collection</h3>
+            <p>Single collection with role-based inheritance. ShelterSeeker, Provider, Verificator, Admin share the same collection distinguished by <code>role</code> field.</p>
+        </div>
+        <div class="legend-card">
+            <h3>Listings Collection</h3>
+            <p>Created by verified Providers. Contains embedded review subdocs and manual_blocked_dates. Photos stored as base64 or URLs.</p>
+        </div>
+        <div class="legend-card">
+            <h3>Bookings Collection</h3>
+            <p>Links Seeker to Listing. Status flow: PENDING &rarr; ACCEPTED/REJECTED/CANCELLED. Accepted bookings auto-block calendar dates.</p>
+        </div>
+        <div class="legend-card">
+            <h3>Reviews Collection</h3>
+            <p>Separate collection for booking reviews (1:1 with Booking). Seeker can create/update review for accepted bookings only.</p>
+        </div>
+        <div class="legend-card">
+            <h3>Notifications Collection</h3>
+            <p>Push notifications for booking events, verification status changes, and general messages. Linked to any user by user_id.</p>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            er: {
+                diagramPadding: 20,
+                layoutDirection: 'TB',
+                minEntityWidth: 100,
+                minEntityHeight: 75,
+                entityPadding: 15,
+                useMaxWidth: true
+            },
+            themeVariables: {
+                primaryColor: '#e51636',
+                primaryTextColor: '#111827',
+                lineColor: '#9ca3af',
+                secondaryColor: '#f9fafb'
+            }
+        });
+    </script>
+</body>
+</html>

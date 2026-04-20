@@ -200,7 +200,6 @@ const VerificatorDashboard = () => {
               { value: 'PENDING', label: 'Pending', icon: Clock },
               { value: 'APPROVED', label: 'Approved', icon: CheckCircle },
               { value: 'REJECTED', label: 'Rejected', icon: XCircle },
-              { value: '', label: 'All', icon: Users }
             ].map((tab) => (
               <button
                 key={tab.value}

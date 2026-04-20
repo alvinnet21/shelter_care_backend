@@ -134,9 +134,12 @@ const AdminDashboard = () => {
     u.full_name?.toLowerCase().includes(userSearch.toLowerCase())
   );
 
-  // Filter listings by search
+  // Filter listings by search (title, address, suburb, postcode)
   const filteredListings = listings.filter(l =>
-    l.title?.toLowerCase().includes(listingSearch.toLowerCase())
+    l.title?.toLowerCase().includes(listingSearch.toLowerCase()) ||
+    l.address?.toLowerCase().includes(listingSearch.toLowerCase()) ||
+    (l.suburb && l.suburb.toLowerCase().includes(listingSearch.toLowerCase())) ||
+    (l.postcode && l.postcode.toLowerCase().includes(listingSearch.toLowerCase()))
   );
 
   if (!user) return null;
@@ -293,7 +296,7 @@ const AdminDashboard = () => {
                     type="text"
                     value={listingSearch}
                     onChange={(e) => setListingSearch(e.target.value)}
-                    placeholder="Search by title..."
+                    placeholder="Search by title, address, suburb, postcode..."
                     className="w-full pl-10 pr-4 py-3 border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e51636]/30 focus:border-[#e51636]"
                     data-testid="admin-listing-search"
                   />

@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
-  const register = async (email, full_name, password, role, question_answer, id_document, police_check) => {
+  const register = async (email, full_name, password, role, question_answer, id_document, police_check, phone_number) => {
     await axios.post(`${API}/auth/register`, {
       email,
       full_name,
@@ -61,7 +61,8 @@ export const AuthProvider = ({ children }) => {
       role,
       question_answer,
       id_document,
-      police_check
+      police_check,
+      phone_number
     });
   };
 

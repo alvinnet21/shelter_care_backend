@@ -54,6 +54,7 @@ class RegisterRequest(BaseModel):
     question_answer: Optional[str] = None
     id_document: Optional[str] = None
     police_check: Optional[str] = None
+    phone_number: Optional[str] = None
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -126,6 +127,9 @@ async def register(req: RegisterRequest):
     )
     if not user:
         raise HTTPException(status_code=400, detail="Email already registered or invalid role")
+    # Save phone number if provided
+    if req.phone_number:
+        await user_repo.update_user(user.id, {"phone_number": req.phone_number})
     return {"message": "User registered successfully", "user_id": user.id, "needs_verification": req.role == "PROVIDER"}
 
 @api_router.post("/auth/login")

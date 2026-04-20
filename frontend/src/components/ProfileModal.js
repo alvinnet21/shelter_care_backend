@@ -86,7 +86,7 @@ const ProfileModal = () => {
 
               {/* Description */}
               <div data-testid="profile-modal-description">
-                <p className="text-xs text-[#9ca3af] uppercase mb-1">Tell me about yourself</p>
+                <p className="text-xs text-[#9ca3af] uppercase mb-1">Description</p>
                 <p className="text-[#4b5563] leading-relaxed">{profile.description || '-'}</p>
               </div>
 
@@ -170,7 +170,7 @@ const ProfileModal = () => {
               {/* Provider: last reviews */}
               {profile.role === 'PROVIDER' && (
                 <div data-testid="profile-modal-reviews">
-                  <p className="text-xs text-[#9ca3af] uppercase mb-2">Last Review</p>
+                  <p className="text-xs text-[#9ca3af] uppercase mb-2">Reviews</p>
                   {profile.last_reviews && profile.last_reviews.length > 0 ? (
                     <div className="flex gap-3 overflow-x-auto pb-2">
                       {profile.last_reviews.map((review) => (

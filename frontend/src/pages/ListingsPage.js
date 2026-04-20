@@ -41,6 +41,8 @@ const ListingsPage = () => {
       filtered = filtered.filter(l =>
         l.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         l.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (l.suburb && l.suburb.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (l.postcode && l.postcode.toLowerCase().includes(searchTerm.toLowerCase())) ||
         l.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -76,7 +78,7 @@ const ListingsPage = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by title, location, or description..."
+              placeholder="Search by title, address, suburb, postcode..."
               className="w-full pl-10 pr-4 py-3 border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e51636]/30 focus:border-[#e51636]"
               data-testid="search-listings-input"
             />

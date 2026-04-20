@@ -35,13 +35,20 @@ const Navbar = () => {
 
   const DashboardIcon = getDashboardIcon();
 
+  const getHomeLink = () => {
+    if (!user) return '/';
+    if (user.role === 'ADMIN') return '/admin';
+    if (user.role === 'VERIFICATOR') return '/verificator';
+    return '/dashboard';
+  };
+
   return (
     <nav className="bg-white/80 backdrop-blur-xl border-b border-[#e5e7eb]/50 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Left: Logo */}
           <div className="flex items-center">
-            <Link to="/" className="flex items-center space-x-2" data-testid="nav-logo">
+            <Link to={getHomeLink()} className="flex items-center space-x-2" data-testid="nav-logo">
               <Home className="h-8 w-8 text-[#e51636]" />
               <span className="text-2xl font-bold text-[#111827]" style={{ fontFamily: 'Outfit, sans-serif' }}>
                 ShelterLink

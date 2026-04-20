@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Home, Edit, Eye, MapPin, Star, CalendarOff, X, Calendar } from 'lucide-react';
+import { Home, Edit, Eye, MapPin, Star, CalendarOff, X, Calendar, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -15,7 +15,8 @@ const MyListingsPage = () => {
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [selectedListing, setSelectedListing] = useState(null);
   const [blockedDates, setBlockedDates] = useState([]);
-  const [newBlockDate, setNewBlockDate] = useState('');
+  const [newBlockStartDate, setNewBlockStartDate] = useState('');
+  const [newBlockEndDate, setNewBlockEndDate] = useState('');
   const [loadingBlock, setLoadingBlock] = useState(false);
 
   useEffect(() => {
@@ -141,7 +142,18 @@ const MyListingsPage = () => {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <div></div>
+              <Link
+                to="/listings/create"
+                className="inline-flex items-center gap-2 bg-[#e51636] text-white hover:bg-[#c4122f] px-5 py-2.5 rounded-lg transition-all font-medium"
+                data-testid="create-listing-btn"
+              >
+                <Plus className="h-5 w-5" />Create Listing
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {listings.map((listing) => (
               <div
                 key={listing.id}
@@ -220,6 +232,7 @@ const MyListingsPage = () => {
               </div>
             ))}
           </div>
+          </div>
         )}
 
         {/* Block Dates Modal */}
@@ -242,29 +255,38 @@ const MyListingsPage = () => {
                 Block dates for <span className="font-medium text-[#111827]">{selectedListing.title}</span>
               </p>
               
-              {/* Add New Block Date */}
+              {/* Add New Block Date Range */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-[#4b5563] mb-2">
-                  Add Date to Block
+                  Block Date Range
                 </label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center mb-2">
                   <input
                     type="date"
-                    value={newBlockDate}
-                    onChange={(e) => setNewBlockDate(e.target.value)}
+                    value={newBlockStartDate}
+                    onChange={(e) => setNewBlockStartDate(e.target.value)}
                     min={new Date().toISOString().split('T')[0]}
-                    className="flex-1 px-3 py-2 border border-[#e5e7eb] rounded-lg focus:ring-2 focus:ring-[#e51636] focus:border-transparent"
-                    data-testid="block-date-input"
+                    className="flex-1 px-3 py-2 border border-[#e5e7eb] rounded-lg focus:ring-2 focus:ring-[#e51636] focus:border-transparent text-sm"
+                    data-testid="block-start-date-input"
                   />
-                  <button
-                    onClick={handleBlockDate}
-                    disabled={!newBlockDate || loadingBlock}
-                    className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all disabled:opacity-50"
-                    data-testid="add-block-date-btn"
-                  >
-                    {loadingBlock ? '...' : 'Block'}
-                  </button>
+                  <span className="text-[#9ca3af] text-sm">to</span>
+                  <input
+                    type="date"
+                    value={newBlockEndDate}
+                    onChange={(e) => setNewBlockEndDate(e.target.value)}
+                    min={newBlockStartDate || new Date().toISOString().split('T')[0]}
+                    className="flex-1 px-3 py-2 border border-[#e5e7eb] rounded-lg focus:ring-2 focus:ring-[#e51636] focus:border-transparent text-sm"
+                    data-testid="block-end-date-input"
+                  />
                 </div>
+                <button
+                  onClick={handleBlockDate}
+                  disabled={!newBlockStartDate || loadingBlock}
+                  className="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all disabled:opacity-50"
+                  data-testid="add-block-date-btn"
+                >
+                  {loadingBlock ? 'Blocking...' : 'Block Dates'}
+                </button>
               </div>
               
               {/* List of Blocked Dates */}

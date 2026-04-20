@@ -62,7 +62,7 @@ const DashboardPage = () => {
                 <Link to="/listings" className="block bg-white border border-[#e5e7eb] rounded-xl p-6 hover:shadow-md transition-all card-hover" data-testid="action-browse-listings">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-[#e51636]/10 rounded-lg flex items-center justify-center"><Home className="h-6 w-6 text-[#e51636]" /></div>
-                    <div><h3 className="font-semibold text-[#111827]">Browse Shelters</h3><p className="text-sm text-[#4b5563]">Find available shelter listings</p></div>
+                    <div><h3 className="font-semibold text-[#111827]">Find Shelter</h3><p className="text-sm text-[#4b5563]">Find available shelter listings</p></div>
                   </div>
                 </Link>
                 <Link to="/bookings" className="block bg-white border border-[#e5e7eb] rounded-xl p-6 hover:shadow-md transition-all card-hover" data-testid="action-view-bookings">
