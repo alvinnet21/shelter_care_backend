@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Upload, X } from 'lucide-react';
+import { Plus, Upload, X, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import ImageUploader from '../components/ImageUploader';
 
@@ -66,6 +66,9 @@ const CreateListingPage = () => {
   return (
     <div className="min-h-screen-header bg-[#f9fafb]">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <button onClick={() => navigate('/listings/my')} className="flex items-center text-[#4b5563] hover:text-[#e51636] mb-4 transition-colors" data-testid="back-to-listings">
+          <ArrowLeft className="h-5 w-5 mr-2" />Back to My Listings
+        </button>
         <h1
           className="text-3xl sm:text-4xl font-bold text-[#111827] mb-8"
           style={{ fontFamily: 'Outfit, sans-serif' }}
