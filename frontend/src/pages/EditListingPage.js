@@ -84,7 +84,7 @@ const EditListingPage = () => {
         }
       );
       toast.success('Listing updated successfully!');
-      navigate('/dashboard');
+      navigate('/listings/my');
     } catch (error) {
       console.error('Failed to update listing:', error);
       toast.error('Failed to update listing');
@@ -105,12 +105,12 @@ const EditListingPage = () => {
     <div className="min-h-screen-header bg-[#f9fafb]">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <button
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate('/listings/my')}
           className="flex items-center text-[#4b5563] hover:text-[#e51636] mb-6 transition-colors"
-          data-testid="back-to-dashboard"
+          data-testid="back-to-listings"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
-          Back to Dashboard
+          Back to My Listings
         </button>
 
         <h1
@@ -211,7 +211,7 @@ const EditListingPage = () => {
               </button>
               <button
                 type="button"
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate('/listings/my')}
                 className="px-8 bg-[#f3f4f6] text-[#111827] hover:bg-[#e5e7eb] py-3 rounded-lg transition-all font-medium"
               >
                 Cancel
