@@ -144,8 +144,7 @@ const VerificatorDashboard = () => {
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div 
-              className="bg-white border border-[#e5e7eb] rounded-xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.06)] cursor-pointer hover:border-blue-300 transition-all"
-              onClick={() => setFilterStatus('')}
+              className="bg-white border border-[#e5e7eb] rounded-xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.06)]"
               data-testid="stat-total-providers"
             >
               <div className="flex items-center justify-between">
@@ -160,8 +159,7 @@ const VerificatorDashboard = () => {
             </div>
 
             <div 
-              className={`bg-white border rounded-xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.06)] cursor-pointer transition-all ${filterStatus === 'PENDING' ? 'border-yellow-400 ring-2 ring-yellow-100' : 'border-[#e5e7eb] hover:border-yellow-300'}`}
-              onClick={() => setFilterStatus('PENDING')}
+              className="bg-white border border-[#e5e7eb] rounded-xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.06)]"
               data-testid="stat-pending-verification"
             >
               <div className="flex items-center justify-between">
@@ -176,8 +174,7 @@ const VerificatorDashboard = () => {
             </div>
 
             <div 
-              className={`bg-white border rounded-xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.06)] cursor-pointer transition-all ${filterStatus === 'APPROVED' ? 'border-green-400 ring-2 ring-green-100' : 'border-[#e5e7eb] hover:border-green-300'}`}
-              onClick={() => setFilterStatus('APPROVED')}
+              className="bg-white border border-[#e5e7eb] rounded-xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.06)]"
               data-testid="stat-verified-providers"
             >
               <div className="flex items-center justify-between">
