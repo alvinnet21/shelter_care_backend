@@ -20,6 +20,12 @@ from services.auth_service import AuthService
 from services.listing_service import ListingService
 from services.booking_service import BookingService
 from services.notification_service import NotificationService
+from services.chatbot_service import (
+    get_faq_templates,
+    build_seeker_context,
+    build_provider_context,
+    ask_ai,
+)
 from models.booking import BookingStatus
 from models.review import BookingReview, ProviderReview
 from models.notification import NotificationType
@@ -787,6 +793,48 @@ async def mark_notification_read(notification_id: str, current_user: dict = Depe
 async def mark_all_read(current_user: dict = Depends(get_current_user)):
     await notification_service.mark_all_read(current_user["id"])
     return {"message": "All notifications marked as read"}
+
+
+# ==================== CHATBOT (FAQ + AI) ====================
+
+class ChatbotAskRequest(BaseModel):
+    question: str
+    history: Optional[List[dict]] = None  # [{role:"user"|"assistant", text:"..."}]
+
+
+@api_router.get("/chatbot/faq-templates")
+async def chatbot_faq_templates(current_user: dict = Depends(get_current_user)):
+    """Return FAQ template list for the current user's role (SEEKER or PROVIDER only)."""
+    role = current_user["role"]
+    if role not in ("SEEKER", "PROVIDER"):
+        raise HTTPException(status_code=403, detail="Chatbot only available for Seekers and Providers")
+    return {"role": role, "templates": get_faq_templates(role)}
+
+
+@api_router.post("/chatbot/ask")
+async def chatbot_ask(req: ChatbotAskRequest, current_user: dict = Depends(get_current_user)):
+    """Free-form question. The bot answers using ONLY the current user's own scoped data."""
+    role = current_user["role"]
+    if role not in ("SEEKER", "PROVIDER"):
+        raise HTTPException(status_code=403, detail="Chatbot only available for Seekers and Providers")
+
+    question = (req.question or "").strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="Question is required")
+    if len(question) > 1000:
+        raise HTTPException(status_code=400, detail="Question is too long (max 1000 chars)")
+
+    if role == "SEEKER":
+        context = await build_seeker_context(
+            current_user, booking_repo, listing_repo, notification_repo
+        )
+    else:
+        context = await build_provider_context(
+            current_user, booking_repo, listing_repo, notification_repo, review_repo
+        )
+
+    answer = await ask_ai(question, context, req.history)
+    return {"answer": answer}
 
 
 # ==================== APP CONFIG ====================
