@@ -1,3 +1,5 @@
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -22,8 +24,10 @@ from models.booking import BookingStatus
 from models.review import BookingReview, ProviderReview
 from models.notification import NotificationType
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+BACKEND_DIR = Path(__file__).resolve().parent
+ROOT_DIR = BACKEND_DIR.parent
+
+load_dotenv(BACKEND_DIR / '.env')
 
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
@@ -761,3 +765,16 @@ async def seed_default_users():
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
+app.mount("/static", StaticFiles(directory=ROOT_DIR / "static"), name="static")
+
+@app.get("/")
+async def serve_frontend():
+    return FileResponse(ROOT_DIR / "index.html")
+
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
+    requested = ROOT_DIR / full_path
+    if requested.exists() and requested.is_file():
+        return FileResponse(requested)
+    return FileResponse(ROOT_DIR / "index.html")
