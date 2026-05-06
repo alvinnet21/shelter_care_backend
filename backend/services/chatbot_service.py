@@ -317,7 +317,7 @@ DO NOT reveal raw JSON or technical implementation details.
 async def ask_ai(question: str, context: dict, history: Optional[List[dict]] = None) -> str:
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        return "Maaf, fitur AI sedang tidak tersedia. Silakan gunakan tombol FAQ di atas."
+        return "Sorry, the AI feature is currently unavailable / Maaf, fitur AI sedang tidak tersedia. Please use the FAQ buttons above."
 
     model = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
@@ -348,4 +348,4 @@ async def ask_ai(question: str, context: dict, history: Optional[List[dict]] = N
         response = await chat.send_message(UserMessage(text=question))
         return str(response).strip()
     except Exception as e:
-        return f"Maaf, terjadi kendala saat menghubungi AI: {str(e)[:120]}. Coba lagi sebentar."
+        return f"Sorry, AI is temporarily unavailable / Maaf, AI sedang ada kendala: {str(e)[:120]}. Please try again shortly."
