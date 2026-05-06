@@ -32,6 +32,44 @@ class EmailService:
             logger.error(f"Failed to send email to {to_email}: {str(e)}")
             return False
 
+    async def send_registration_email(self, to_email: str, full_name: str, role: str) -> bool:
+        """Welcome email sent right after user registration."""
+        role_title = {
+            "SEEKER": "Shelter Seeker",
+            "PROVIDER": "Shelter Provider",
+            "VERIFICATOR": "Verificator",
+            "ADMIN": "Administrator",
+        }.get(role.upper(), "User")
+
+        next_steps = {
+            "SEEKER": "You can now log in, browse available shelters, and send booking requests.",
+            "PROVIDER": "Your provider account is pending verification by our team. You will be notified by email once it's approved.",
+            "VERIFICATOR": "You can now log in to review provider verification requests.",
+            "ADMIN": "You can now log in to the admin panel.",
+        }.get(role.upper(), "You can now log in to your account.")
+
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background-color: #e51636; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+                <h1 style="color: white; margin: 0;">Welcome to ShelterLink</h1>
+            </div>
+            <div style="background-color: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;">
+                <h2 style="color: #111827;">Hello {full_name},</h2>
+                <p style="color: #4b5563;">Thank you for registering on <strong>ShelterLink</strong> as a
+                    <strong style="color: #e51636;">{role_title}</strong>.</p>
+                <div style="background-color: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                    <p style="color: #4b5563; margin: 0 0 10px 0;"><strong>What's next?</strong></p>
+                    <p style="color: #4b5563; margin: 0;">{next_steps}</p>
+                </div>
+                <p style="color: #4b5563;">If you did not create this account, please ignore this email or contact our support team.</p>
+                <p style="color: #9ca3af; font-size: 12px; margin-top: 30px;">This is an automated message from ShelterLink.</p>
+            </div>
+        </body>
+        </html>
+        """
+        return self._send(to_email, 'Welcome to ShelterLink', html_content)
+
     async def send_password_reset_email(self, to_email: str, full_name: str, new_password: str) -> bool:
         html_content = f"""
         <html>

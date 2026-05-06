@@ -92,7 +92,18 @@ class AuthService:
         else:
             return None
 
-        return await self.user_repository.create_user(user)
+        created = await self.user_repository.create_user(user)
+        # Send welcome / registration email (don't fail registration if email fails)
+        if created:
+            try:
+                await self.email_service.send_registration_email(
+                    to_email=created.email,
+                    full_name=created.full_name,
+                    role=created.role,
+                )
+            except Exception:
+                pass
+        return created
 
     async def login(self, email: str, password: str) -> Optional[dict]:
         """Login user - checks verification status for providers"""

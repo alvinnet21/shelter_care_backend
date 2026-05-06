@@ -106,6 +106,16 @@ class CreateUserRequest(BaseModel):
     role: str
     phone_number: Optional[str] = None
 
+class UpdateListingRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    address: Optional[str] = None
+    suburb: Optional[str] = None
+    postcode: Optional[str] = None
+    photos: Optional[List[str]] = None
+    is_available: Optional[bool] = None
+
+
 class BlockDatesRequest(BaseModel):
     dates: List[str]
 
@@ -208,6 +218,45 @@ async def update_password(req: UpdatePasswordRequest, current_user: dict = Depen
 
 
 # ==================== PUBLIC PROFILE ====================
+
+@api_router.get("/users/providers")
+async def list_all_providers(current_user: dict = Depends(get_current_user)):
+    """Public list of all verified providers (FR-27) — Seekers can view all provider profiles."""
+    query = {
+        "role": "PROVIDER",
+        "deleted_at": None,
+        "is_verified": True,
+        "is_suspended": {"$ne": True},
+    }
+    providers = await user_repo.collection.find(
+        query, {"_id": 0, "password": 0, "id_document": 0, "police_check": 0}
+    ).to_list(10000)
+
+    enriched = []
+    for p in providers:
+        listings = await listing_repo.get_listings_by_provider(p["id"])
+        # Aggregate rating across all their listings
+        all_ratings = []
+        for lst in listings:
+            reviews = await review_repo.collection.find(
+                {"listing_id": lst["id"]}, {"_id": 0}
+            ).to_list(1000)
+            all_ratings.extend([r["rating"] for r in reviews])
+        avg_rating = round(sum(all_ratings) / len(all_ratings), 1) if all_ratings else 0
+        enriched.append({
+            "id": p["id"],
+            "full_name": p["full_name"],
+            "email": p["email"],
+            "profile_photo": p.get("profile_photo"),
+            "description": p.get("description"),
+            "listings_count": len(listings),
+            "average_rating": avg_rating,
+            "review_count": len(all_ratings),
+            "created_at": p.get("created_at"),
+        })
+    enriched.sort(key=lambda x: (x["average_rating"], x["listings_count"]), reverse=True)
+    return {"providers": enriched}
+
 
 @api_router.get("/users/{user_id}/profile")
 async def get_public_profile(user_id: str):
@@ -500,19 +549,30 @@ async def block_dates(listing_id: str, start_date: str, end_date: str, current_u
     return {"message": "Dates blocked successfully"}
 
 @api_router.put("/listings/{listing_id}")
-async def update_listing(listing_id: str, title: Optional[str] = None, description: Optional[str] = None, address: Optional[str] = None, suburb: Optional[str] = None, postcode: Optional[str] = None, photos: Optional[List[str]] = None, is_available: Optional[bool] = None, current_user: dict = Depends(get_current_user)):
+async def update_listing(listing_id: str, req: UpdateListingRequest, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "PROVIDER":
         raise HTTPException(status_code=403, detail="Only providers can update listings")
     listing = await listing_repo.get_listing_by_id(listing_id)
     if not listing or listing["provider_id"] != current_user["id"]:
         raise HTTPException(status_code=404, detail="Listing not found")
-    update_data = {}
-    for key, val in [("title", title), ("description", description), ("address", address), ("suburb", suburb), ("postcode", postcode), ("photos", photos), ("is_available", is_available)]:
-        if val is not None:
-            update_data[key] = val
+    update_data = {k: v for k, v in req.model_dump().items() if v is not None}
     if update_data:
         await listing_repo.update_listing(listing_id, update_data)
     return {"message": "Listing updated successfully"}
+
+@api_router.delete("/listings/{listing_id}")
+async def delete_listing(listing_id: str, current_user: dict = Depends(get_current_user)):
+    """Provider soft-deletes their own listing (FR-19)"""
+    if current_user["role"] != "PROVIDER":
+        raise HTTPException(status_code=403, detail="Only providers can delete listings")
+    listing = await listing_repo.get_listing_by_id(listing_id)
+    if not listing or listing["provider_id"] != current_user["id"]:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    if listing.get("deleted_at"):
+        raise HTTPException(status_code=400, detail="Listing already deleted")
+    now = datetime.now(timezone.utc).isoformat()
+    await listing_repo.update_listing(listing_id, {"deleted_at": now, "is_available": False})
+    return {"message": "Listing deleted successfully"}
 
 @api_router.get("/listings/{listing_id}/availability")
 async def check_availability(listing_id: str):
@@ -766,7 +826,7 @@ async def seed_default_users():
 async def shutdown_db_client():
     client.close()
 
-app.mount("/static", StaticFiles(directory=ROOT_DIR / "static"), name="static")
+# app.mount("/static", StaticFiles(directory=ROOT_DIR / "static"), name="static")
 
 @app.get("/")
 async def serve_frontend():
